@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Sections",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id", "title", "content"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Unique identifier for the section"
+      },
+      "title": {
+        "type": "string",
+        "description": "Title of the section"
+      },
+      "content": {
+        "type": "array",
+        "description": "List of content strings for the section",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "additionalProperties": false
+  }
+}

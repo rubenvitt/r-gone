@@ -10,18 +10,23 @@ import EmergencyAccessManager from "@/components/ui/EmergencyAccessManager";
 import DeadManSwitchManager from "@/components/ui/DeadManSwitchManager";
 import { AccountRecoveryManager } from "@/components/ui/AccountRecoveryManager";
 import ContactDirectory from "@/components/ui/ContactDirectory";
+import DigitalAssetInventory from "@/components/ui/DigitalAssetInventory";
 import AuthGuard from "@/components/ui/AuthGuard";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, FolderOpen, Shield, AlertTriangle, Clock, LogOut, KeyRound, Users } from 'lucide-react';
+import { PlusCircle, FolderOpen, Shield, AlertTriangle, Clock, LogOut, KeyRound, Users, Package } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { ContactDirectory as ContactDirectoryType } from '@/types/data';
+import { ContactDirectory as ContactDirectoryType, DigitalAssetInventory as DigitalAssetInventoryType } from '@/types/data';
 import { contactDirectoryService } from '@/services/contact-directory-service';
+import { digitalAssetInventoryService } from '@/services/digital-asset-inventory-service';
 
 export default function Home() {
-  const [view, setView] = useState<'editor' | 'files' | 'backup' | 'emergency' | 'deadmanswitch' | 'recovery' | 'contacts'>('editor')
+  const [view, setView] = useState<'editor' | 'files' | 'backup' | 'emergency' | 'deadmanswitch' | 'recovery' | 'contacts' | 'assets'>('editor')
   const [selectedFileId, setSelectedFileId] = useState<string>('')
   const [contactDirectory, setContactDirectory] = useState<ContactDirectoryType>(() => 
     contactDirectoryService.createEmptyDirectory()
+  )
+  const [digitalAssetInventory, setDigitalAssetInventory] = useState<DigitalAssetInventoryType>(() => 
+    digitalAssetInventoryService.createEmptyInventory()
   )
   const { logout } = useAuth()
 
@@ -116,6 +121,15 @@ export default function Home() {
                   <Users className="h-4 w-4" />
                   <span>Contacts</span>
                 </Button>
+                <Button
+                  variant={view === 'assets' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setView('assets')}
+                  className="flex items-center space-x-2"
+                >
+                  <Package className="h-4 w-4" />
+                  <span>Digital Assets</span>
+                </Button>
               </div>
             </div>
 
@@ -161,11 +175,18 @@ export default function Home() {
                 <div>
                   <DeadManSwitchManager userId="default-user" />
                 </div>
-              ) : (
+              ) : view === 'contacts' ? (
                 <div>
                   <ContactDirectory 
                     directory={contactDirectory}
                     onDirectoryChange={setContactDirectory}
+                  />
+                </div>
+              ) : (
+                <div>
+                  <DigitalAssetInventory 
+                    inventory={digitalAssetInventory}
+                    onInventoryChange={setDigitalAssetInventory}
                   />
                 </div>
               )}

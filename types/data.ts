@@ -2874,6 +2874,376 @@ export interface AssetSearchResult {
     }[];
 }
 
+// Instructions & Messages System interfaces
+export interface PersonalMessage {
+    id: string;
+    type: MessageType;
+    format: MessageFormat;
+    category: MessageCategory;
+    title: string;
+    content: MessageContent;
+    recipients: MessageRecipient[];
+    metadata: MessageMetadata;
+    conditions?: MessageCondition[];
+    scheduling?: MessageScheduling;
+    attachments?: MessageAttachment[];
+    status: MessageStatus;
+    createdAt: string;
+    updatedAt: string;
+    createdBy: string;
+    lastModifiedBy?: string;
+    version: number;
+    locale?: string; // For multi-language support
+    parentMessageId?: string; // For message versioning/translations
+}
+
+export type MessageType = 
+    | 'personal'        // Personal message to loved ones
+    | 'instruction'     // Specific instructions or guidance
+    | 'financial'       // Financial instructions
+    | 'medical'         // Medical information/wishes
+    | 'legal'           // Legal instructions
+    | 'funeral'         // Funeral arrangements
+    | 'password'        // Password/access instructions
+    | 'emergency'       // Emergency contact info
+    | 'farewell'        // Final farewell message
+    | 'memory'          // Shared memories
+    | 'advice'          // Life advice
+    | 'confession'      // Things to confess
+    | 'gratitude'       // Thank you messages
+    | 'apology'         // Apologies
+    | 'wish'            // Final wishes
+    | 'legacy'          // Legacy instructions
+    | 'business'        // Business succession
+    | 'creative'        // Creative works/ideas
+    | 'spiritual'       // Spiritual/religious messages
+    | 'custom';         // Custom category
+
+export type MessageFormat = 
+    | 'text'            // Plain or rich text
+    | 'audio'           // Audio recording
+    | 'video'           // Video recording
+    | 'mixed';          // Combination of formats
+
+export type MessageCategory = 
+    | 'immediate'       // Deliver immediately upon activation
+    | 'timed'           // Deliver at specific time/date
+    | 'conditional'     // Deliver based on conditions
+    | 'milestone'       // Deliver on life milestones
+    | 'recurring'       // Deliver repeatedly
+    | 'manual';         // Requires manual trigger
+
+export interface MessageContent {
+    text?: string;              // Rich text content (HTML)
+    plainText?: string;         // Plain text version
+    audioUrl?: string;          // URL to audio file
+    audioTranscript?: string;   // Transcript of audio
+    videoUrl?: string;          // URL to video file
+    videoTranscript?: string;   // Transcript of video
+    videoPoster?: string;       // Video thumbnail
+    duration?: number;          // Duration in seconds for audio/video
+    size?: number;              // File size in bytes
+    mimeType?: string;          // MIME type of media
+    encrypted?: boolean;        // Whether media is encrypted
+    compressionInfo?: {
+        original: number;
+        compressed: number;
+        algorithm: string;
+    };
+}
+
+export interface MessageRecipient {
+    id: string;
+    type: RecipientType;
+    identifier: string;         // Email, beneficiary ID, contact ID, etc.
+    name: string;
+    relationship?: string;
+    priority: number;           // Delivery priority (1 = highest)
+    deliveryMethod: DeliveryMethod[];
+    permissions: MessagePermissions;
+    acknowledgmentRequired?: boolean;
+    metadata?: Record<string, any>;
+}
+
+export type RecipientType = 
+    | 'beneficiary'     // Existing beneficiary
+    | 'contact'         // From contact directory
+    | 'email'           // Direct email address
+    | 'phone'           // Phone number
+    | 'group'           // Group of recipients
+    | 'public'          // Publicly accessible
+    | 'executor'        // Estate executor
+    | 'lawyer'          // Legal representative
+    | 'all';            // All beneficiaries
+
+export type DeliveryMethod = 
+    | 'system'          // In-system delivery
+    | 'email'           // Email delivery
+    | 'sms'             // SMS delivery
+    | 'webhook'         // Webhook notification
+    | 'print';          // Physical delivery
+
+export interface MessagePermissions {
+    canView: boolean;
+    canDownload: boolean;
+    canForward: boolean;
+    canReply: boolean;
+    canPrint: boolean;
+    expiresAfterViewing?: number; // Minutes
+    maxViews?: number;
+    requiresPassword?: boolean;
+    passwordHint?: string;
+}
+
+export interface MessageMetadata {
+    importance: 'low' | 'medium' | 'high' | 'critical';
+    sensitivity: 'public' | 'private' | 'confidential' | 'secret';
+    language: string;           // ISO language code
+    readTime?: number;          // Estimated minutes
+    keywords?: string[];
+    tone?: MessageTone;
+    isTemplate?: boolean;
+    templateId?: string;
+    templateVariables?: Record<string, any>;
+    aiGenerated?: boolean;
+    aiModel?: string;
+    lastReviewed?: string;
+    reviewedBy?: string;
+    approvalStatus?: 'draft' | 'pending' | 'approved' | 'rejected';
+    approvalNotes?: string;
+}
+
+export type MessageTone = 
+    | 'formal'
+    | 'informal'
+    | 'emotional'
+    | 'professional'
+    | 'humorous'
+    | 'serious'
+    | 'loving'
+    | 'neutral';
+
+export interface MessageCondition {
+    id: string;
+    type: ConditionType;
+    operator: 'AND' | 'OR' | 'NOT';
+    parameters: Record<string, any>;
+    description?: string;
+}
+
+export interface MessageScheduling {
+    type: SchedulingType;
+    deliverAt?: string;         // ISO date for specific time
+    delayHours?: number;        // Delay after trigger
+    recurringPattern?: RecurringPattern;
+    timezone?: string;
+    expiresAt?: string;         // Message expires if not delivered by
+    retryPolicy?: {
+        maxAttempts: number;
+        intervalHours: number;
+    };
+    dependencies?: string[];    // Other message IDs that must be delivered first
+}
+
+export type SchedulingType = 
+    | 'immediate'
+    | 'scheduled'
+    | 'delayed'
+    | 'recurring'
+    | 'milestone'
+    | 'conditional';
+
+export interface RecurringPattern {
+    frequency: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+    interval?: number;
+    daysOfWeek?: number[];      // 0-6
+    dayOfMonth?: number;        // 1-31
+    monthOfYear?: number;       // 1-12
+    customCron?: string;        // Cron expression
+    endDate?: string;
+    maxOccurrences?: number;
+}
+
+export interface MessageAttachment {
+    id: string;
+    type: AttachmentType;
+    name: string;
+    url?: string;
+    documentId?: string;        // Reference to document repository
+    assetId?: string;           // Reference to digital asset
+    size: number;
+    mimeType: string;
+    thumbnail?: string;
+    description?: string;
+    encrypted: boolean;
+    checksum: string;
+}
+
+export type AttachmentType = 
+    | 'document'
+    | 'image'
+    | 'video'
+    | 'audio'
+    | 'file'
+    | 'link';
+
+export type MessageStatus = 
+    | 'draft'           // Being composed
+    | 'scheduled'       // Scheduled for delivery
+    | 'pending'         // Awaiting delivery conditions
+    | 'sending'         // In process of sending
+    | 'delivered'       // Successfully delivered
+    | 'viewed'          // Viewed by recipient
+    | 'failed'          // Delivery failed
+    | 'expired'         // Expired without delivery
+    | 'cancelled';      // Manually cancelled
+
+export interface MessageTemplate {
+    id: string;
+    name: string;
+    description: string;
+    type: MessageType;
+    category: TemplateCategory;
+    content: Partial<PersonalMessage>;
+    variables: TemplateVariable[];
+    tags: string[];
+    isSystem: boolean;          // System-provided template
+    isPublic: boolean;          // Shared template
+    usage: number;              // Usage count
+    rating?: number;            // User rating
+    author: string;
+    createdAt: string;
+    updatedAt: string;
+    locale: string;
+}
+
+export type TemplateCategory = 
+    | 'farewell'
+    | 'instructions'
+    | 'financial'
+    | 'legal'
+    | 'medical'
+    | 'memories'
+    | 'advice'
+    | 'gratitude'
+    | 'apology'
+    | 'business'
+    | 'creative'
+    | 'spiritual'
+    | 'custom';
+
+export interface TemplateVariable {
+    name: string;
+    type: 'text' | 'number' | 'date' | 'boolean' | 'select' | 'recipient';
+    label: string;
+    placeholder?: string;
+    defaultValue?: any;
+    required: boolean;
+    options?: Array<{ label: string; value: any }>;
+    validation?: {
+        pattern?: string;
+        min?: number;
+        max?: number;
+        message?: string;
+    };
+}
+
+export interface MessageDeliveryLog {
+    id: string;
+    messageId: string;
+    recipientId: string;
+    deliveryMethod: DeliveryMethod;
+    status: DeliveryStatus;
+    attemptedAt: string;
+    deliveredAt?: string;
+    viewedAt?: string;
+    failureReason?: string;
+    retryCount: number;
+    nextRetryAt?: string;
+    metadata?: Record<string, any>;
+    acknowledgment?: {
+        required: boolean;
+        acknowledgedAt?: string;
+        acknowledgedBy?: string;
+        acknowledgmentMethod?: string;
+        acknowledgmentNote?: string;
+    };
+}
+
+export type DeliveryStatus = 
+    | 'pending'
+    | 'queued'
+    | 'sending'
+    | 'sent'
+    | 'delivered'
+    | 'viewed'
+    | 'bounced'
+    | 'failed'
+    | 'expired';
+
+export interface MessagesLibrary {
+    messages: PersonalMessage[];
+    templates: MessageTemplate[];
+    categories: MessageCategory[];
+    deliveryLogs: MessageDeliveryLog[];
+    settings: MessageSystemSettings;
+    statistics: MessageStatistics;
+}
+
+export interface MessageSystemSettings {
+    defaultFormat: MessageFormat;
+    defaultCategory: MessageCategory;
+    enableAudioMessages: boolean;
+    enableVideoMessages: boolean;
+    maxAudioDuration: number;   // seconds
+    maxVideoDuration: number;   // seconds
+    maxFileSize: number;        // bytes
+    supportedLanguages: string[];
+    defaultLanguage: string;
+    enableTemplates: boolean;
+    enableAIAssistance: boolean;
+    enableScheduling: boolean;
+    enableConditionalDelivery: boolean;
+    deliveryRetryAttempts: number;
+    deliveryRetryInterval: number; // hours
+    archiveDeliveredMessages: boolean;
+    archiveAfterDays: number;
+    notificationSettings: {
+        notifyOnDraft: boolean;
+        notifyOnScheduled: boolean;
+        notifyOnDelivered: boolean;
+        notifyOnViewed: boolean;
+        notifyOnFailed: boolean;
+        notificationChannels: ('email' | 'sms' | 'push')[];
+    };
+    mediaStorage: {
+        provider: 'local' | 'cloud' | 'hybrid';
+        cloudProvider?: string;
+        encryptMedia: boolean;
+        compressMedia: boolean;
+        generateTranscripts: boolean;
+        generateThumbnails: boolean;
+    };
+}
+
+export interface MessageStatistics {
+    totalMessages: number;
+    messagesByType: Record<MessageType, number>;
+    messagesByFormat: Record<MessageFormat, number>;
+    messagesByStatus: Record<MessageStatus, number>;
+    totalRecipients: number;
+    deliveredMessages: number;
+    viewedMessages: number;
+    failedDeliveries: number;
+    averageDeliveryTime: number; // minutes
+    popularTemplates: Array<{
+        templateId: string;
+        usageCount: number;
+    }>;
+    languageDistribution: Record<string, number>;
+    lastAnalysis: string;
+}
+
 // Enhanced file structure with all components including beneficiary management
 export interface EnhancedDecryptedData extends DecryptedData {
     versionHistory?: VersionHistory[];
@@ -2881,6 +3251,7 @@ export interface EnhancedDecryptedData extends DecryptedData {
     documentRepository?: DocumentRepository;
     contactDirectory?: ContactDirectory;
     digitalAssetInventory?: DigitalAssetInventory;
+    messagesLibrary?: MessagesLibrary;
     auditLogs?: AuditLogEntry[];
     auditConfiguration?: AuditConfiguration;
     beneficiaryManagement?: BeneficiaryManagementSystem;

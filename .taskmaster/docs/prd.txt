@@ -1,0 +1,71 @@
+# Product Requirements Document: "If I'm Gone" - Personal Emergency Information Vault
+
+<context>
+# Overview  
+"If I'm Gone" is a personal emergency information vault that allows individuals to securely store sensitive information (passwords, documents, instructions) in encrypted rich text format for emergency access by trusted contacts. This solves the problem of critical information being inaccessible when someone is incapacitated or deceased, providing peace of mind and practical emergency planning.
+
+# Core Features  
+1. **Rich Text Information Storage**: Simple, unstructured rich text editor for storing any type of information (passwords, account details, instructions, personal messages)
+2. **Military-Grade Encryption**: Automatic encryption of all stored data using existing OpenPGP/RSA implementation
+3. **Emergency Access System**: Secure method for trusted contacts to access information in genuine emergencies
+4. **Simple Self-Hosting**: Easy deployment with minimal infrastructure requirements and maximum security
+
+# User Experience  
+- **Primary User**: Individual storing emergency information
+- **Secondary User**: Trusted contact accessing information in emergency
+- **Key Flow**: Store → Encrypt → Share access method → Emergency retrieval
+- **UI Focus**: Clean, trustworthy interface that emphasizes security and simplicity
+</context>
+
+<PRD>
+# Technical Architecture  
+- **Frontend**: Next.js with App Router, shadcn/ui components, rich text editor
+- **Backend**: Next.js API routes with file-based storage (no external database)
+- **Encryption**: Existing OpenPGP and RSA utilities in lib/pgp.ts and utils/crypto.ts
+- **Storage**: Encrypted JSON files in local file system using existing FileService
+- **Authentication**: Simple passphrase-based access (no user accounts needed)
+- **Deployment**: Single Docker container or Vercel deployment
+
+# Development Roadmap  
+
+## Phase 1: MVP - Basic Encrypted Storage
+- Rich text editor for information input
+- Encryption/decryption workflow using existing utilities
+- Local file storage for encrypted data
+- Basic passphrase protection
+- Simple read/write interface
+
+## Phase 2: Emergency Access
+- Emergency access URL generation
+- Time-delayed access mechanism
+- Trusted contact notification system
+- Emergency instructions page
+
+## Phase 3: Enhanced Security & UX
+- Multiple information categories/sections
+- Backup and recovery options
+- Enhanced UI/UX with better visual design
+- Mobile responsiveness improvements
+
+# Logical Dependency Chain
+1. **Rich Text Editor**: Foundation for content input (immediately usable frontend)
+2. **Encryption Integration**: Connect editor to existing encryption utilities
+3. **File Storage**: Implement save/load functionality with FileService
+4. **Passphrase Protection**: Add authentication layer
+5. **Emergency Access**: Build emergency retrieval system
+6. **UI Polish**: Enhance user experience and security indicators
+
+# Risks and Mitigations  
+- **Risk**: Data loss due to file corruption
+  **Mitigation**: Implement automatic backups and file integrity checks
+- **Risk**: Forgotten passphrases locking out users
+  **Mitigation**: Emergency recovery mechanism with strong security
+- **Risk**: Complex deployment deterring users
+  **Mitigation**: One-click deployment options and clear documentation
+
+# Appendix  
+- Existing encryption implementations are solid foundation
+- File-based storage eliminates database complexity
+- Focus on personal use (1-10 users max) not scale
+- Security audit should focus on encryption implementation and emergency access controls
+</PRD>

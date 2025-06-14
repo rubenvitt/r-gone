@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Plus,
   Search,
@@ -36,7 +37,12 @@ import {
   Briefcase,
   Palette,
   Sparkles,
-  MoreVertical
+  MoreVertical,
+  Zap,
+  Settings,
+  PlayCircle,
+  PauseCircle,
+  X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -46,12 +52,15 @@ import {
   MessageFormat,
   MessageCategory,
   MessageStatus,
-  MessageRecipient
+  MessageRecipient,
+  ConditionalRule
 } from '@/types/data'
 import { messagesLibraryService } from '@/services/messages-library-service'
 import MessageComposer from './MessageComposer'
 import MessageDetailView from './MessageDetailView'
 import MessageTemplateSelector from './MessageTemplateSelector'
+import ConditionalRuleBuilder from './ConditionalRuleBuilder'
+import ConditionalRuleTester from './ConditionalRuleTester'
 
 interface MessagesLibraryProps {
   library: MessagesLibraryType
@@ -62,7 +71,7 @@ interface MessagesLibraryProps {
 }
 
 type ViewMode = 'grid' | 'list'
-type FilterView = 'all' | 'drafts' | 'scheduled' | 'delivered' | 'templates'
+type FilterView = 'all' | 'drafts' | 'scheduled' | 'delivered' | 'templates' | 'rules'
 
 export default function MessagesLibrary({
   library,
@@ -71,6 +80,7 @@ export default function MessagesLibrary({
   contacts = [],
   className = ''
 }: MessagesLibraryProps) {
+  const { t } = useTranslation('common')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterView, setFilterView] = useState<FilterView>('all')
   const [selectedType, setSelectedType] = useState<MessageType | 'all'>('all')
@@ -80,6 +90,10 @@ export default function MessagesLibrary({
   const [showTemplates, setShowTemplates] = useState(false)
   const [editingMessage, setEditingMessage] = useState<string | null>(null)
   const [viewingMessage, setViewingMessage] = useState<string | null>(null)
+  const [templateMessage, setTemplateMessage] = useState<Partial<PersonalMessage> | null>(null)
+  const [showRuleBuilder, setShowRuleBuilder] = useState(false)
+  const [editingRule, setEditingRule] = useState<string | null>(null)
+  const [testingRule, setTestingRule] = useState<string | null>(null)
 
   // Get message type icon
   const getMessageTypeIcon = useCallback((type: MessageType) => {
@@ -232,7 +246,7 @@ export default function MessagesLibrary({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <Mail className="h-6 w-6 text-blue-600" />
-            <h2 className="text-xl font-semibold">Messages & Instructions</h2>
+            <h2 className="text-xl font-semibold">{t('messages.title')}</h2>
           </div>
           <div className="flex items-center space-x-2">
             <Button
@@ -241,7 +255,7 @@ export default function MessagesLibrary({
               onClick={() => setShowTemplates(true)}
             >
               <FileText className="h-4 w-4 mr-2" />
-              Templates
+              {t('messages.templates')}
             </Button>
             <Button
               variant="default"
@@ -249,7 +263,7 @@ export default function MessagesLibrary({
               onClick={() => setShowComposer(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
-              New Message
+              {t('messages.newMessage')}
             </Button>
           </div>
         </div>
@@ -260,25 +274,25 @@ export default function MessagesLibrary({
             <div className="text-2xl font-bold text-blue-600">
               {library.statistics.totalMessages}
             </div>
-            <div className="text-sm text-blue-800">Total Messages</div>
+            <div className="text-sm text-blue-800">{t('messages.totalMessages')}</div>
           </div>
           <div className="text-center p-3 bg-green-50 rounded-lg">
             <div className="text-2xl font-bold text-green-600">
               {library.statistics.deliveredMessages}
             </div>
-            <div className="text-sm text-green-800">Delivered</div>
+            <div className="text-sm text-green-800">{t('messages.delivered')}</div>
           </div>
           <div className="text-center p-3 bg-yellow-50 rounded-lg">
             <div className="text-2xl font-bold text-yellow-600">
               {library.statistics.messagesByStatus.scheduled || 0}
             </div>
-            <div className="text-sm text-yellow-800">Scheduled</div>
+            <div className="text-sm text-yellow-800">{t('messages.scheduled')}</div>
           </div>
           <div className="text-center p-3 bg-purple-50 rounded-lg">
             <div className="text-2xl font-bold text-purple-600">
               {library.statistics.totalRecipients}
             </div>
-            <div className="text-sm text-purple-800">Recipients</div>
+            <div className="text-sm text-purple-800">{t('messages.recipients')}</div>
           </div>
         </div>
       </div>
@@ -291,7 +305,7 @@ export default function MessagesLibrary({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search messages..."
+              placeholder={t('messages.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -300,7 +314,7 @@ export default function MessagesLibrary({
 
           {/* Filter tabs */}
           <div className="flex bg-gray-100 p-1 rounded-lg">
-            {(['all', 'drafts', 'scheduled', 'delivered', 'templates'] as FilterView[]).map(view => (
+            {(['all', 'drafts', 'scheduled', 'delivered', 'templates', 'rules'] as FilterView[]).map(view => (
               <Button
                 key={view}
                 variant={filterView === view ? 'default' : 'ghost'}
@@ -308,7 +322,7 @@ export default function MessagesLibrary({
                 onClick={() => setFilterView(view)}
                 className="capitalize"
               >
-                {view}
+                {t(`messages.${view}`)}
               </Button>
             ))}
           </div>
@@ -321,19 +335,9 @@ export default function MessagesLibrary({
             onChange={(e) => setSelectedType(e.target.value as MessageType | 'all')}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">All Types</option>
-            {Object.entries({
-              personal: 'Personal',
-              instruction: 'Instructions',
-              financial: 'Financial',
-              medical: 'Medical',
-              legal: 'Legal',
-              farewell: 'Farewell',
-              memory: 'Memories',
-              advice: 'Advice',
-              gratitude: 'Gratitude'
-            }).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
+            <option value="all">{t('messages.allTypes')}</option>
+            {(['personal', 'instruction', 'financial', 'medical', 'legal', 'farewell', 'memory', 'advice', 'gratitude'] as MessageType[]).map(type => (
+              <option key={type} value={type}>{t(`messages.messageTypes.${type}`)}</option>
             ))}
           </select>
 
@@ -342,20 +346,140 @@ export default function MessagesLibrary({
             onChange={(e) => setSelectedFormat(e.target.value as MessageFormat | 'all')}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">All Formats</option>
-            <option value="text">Text</option>
-            <option value="audio">Audio</option>
-            <option value="video">Video</option>
-            <option value="mixed">Mixed</option>
+            <option value="all">{t('messages.allFormats')}</option>
+            <option value="text">{t('messages.formats.text')}</option>
+            <option value="audio">{t('messages.formats.audio')}</option>
+            <option value="video">{t('messages.formats.video')}</option>
+            <option value="mixed">{t('messages.formats.mixed')}</option>
           </select>
         </div>
       </div>
 
       {/* Messages Grid/List */}
       <div className="bg-white rounded-lg shadow-sm border min-h-[400px]">
-        {filterView === 'templates' ? (
+        {filterView === 'rules' ? (
           <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Message Templates</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Conditional Rules</h3>
+              <Button
+                onClick={() => setShowRuleBuilder(true)}
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Rule
+              </Button>
+            </div>
+            {library.conditionalRules && library.conditionalRules.length > 0 ? (
+              <div className="space-y-4">
+                {library.conditionalRules.map(rule => (
+                  <div
+                    key={rule.id}
+                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Zap className="h-5 w-5 text-purple-600" />
+                          <h4 className="font-medium">{rule.name}</h4>
+                          {rule.enabled ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                              <PlayCircle className="h-3 w-3 mr-1" />
+                              {t('messages.active')}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                              <PauseCircle className="h-3 w-3 mr-1" />
+                              {t('messages.inactive')}
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-500">
+                            Priority {rule.priority}
+                          </span>
+                        </div>
+                        {rule.description && (
+                          <p className="text-sm text-gray-600 mb-2">{rule.description}</p>
+                        )}
+                        <div className="flex items-center space-x-4 text-xs text-gray-500">
+                          <span>{rule.conditions.length} {rule.conditions.length === 1 ? t('messages.condition') : t('messages.conditions')}</span>
+                          <span>•</span>
+                          <span>{rule.actions.length} {rule.actions.length === 1 ? t('messages.action') : t('messages.actions')}</span>
+                          {rule.metadata?.lastTriggered && (
+                            <>
+                              <span>•</span>
+                              <span>{t('messages.lastTriggered')}: {new Date(rule.metadata.lastTriggered).toLocaleDateString()}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 ml-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setTestingRule(rule.id)}
+                        >
+                          <PlayCircle className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const updatedLibrary = messagesLibraryService.updateConditionalRule(
+                              library,
+                              rule.id,
+                              { enabled: !rule.enabled }
+                            )
+                            onLibraryChange(updatedLibrary)
+                          }}
+                        >
+                          {rule.enabled ? (
+                            <PauseCircle className="h-4 w-4" />
+                          ) : (
+                            <PlayCircle className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingRule(rule.id)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete the rule "${rule.name}"?`)) {
+                              const updatedLibrary = messagesLibraryService.deleteConditionalRule(library, rule.id)
+                              onLibraryChange(updatedLibrary)
+                            }
+                          }}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Zap className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium mb-2">{t('messages.rules.noRules')}</p>
+                <p>{t('messages.createRulesDescription')}</p>
+                <Button
+                  onClick={() => setShowRuleBuilder(true)}
+                  className="mt-4"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('messages.createYourFirstRule')}
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : filterView === 'templates' ? (
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-4">{t('messages.messageTemplates')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {library.templates.map(template => (
                 <div
@@ -376,7 +500,7 @@ export default function MessagesLibrary({
                   </div>
                   <p className="text-sm text-gray-600 mb-2">{template.description}</p>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500">Used {template.usage} times</span>
+                    <span className="text-gray-500">{t('messages.used')} {template.usage} {t('messages.times')}</span>
                     <span className={`px-2 py-1 rounded-full ${
                       template.isSystem ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
                     }`}>
@@ -390,11 +514,11 @@ export default function MessagesLibrary({
         ) : filteredMessages.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             <Mail className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-lg font-medium mb-2">No messages found</p>
+            <p className="text-lg font-medium mb-2">{t('messages.noMessagesFound')}</p>
             <p>
               {searchTerm || selectedType !== 'all' || selectedFormat !== 'all'
-                ? 'Try adjusting your search or filters.'
-                : 'Create your first message to get started.'
+                ? t('messages.tryAdjustingSearch')
+                : t('messages.createFirstMessage')
               }
             </p>
             {!searchTerm && selectedType === 'all' && selectedFormat === 'all' && (
@@ -403,7 +527,7 @@ export default function MessagesLibrary({
                 className="mt-4"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Create Your First Message
+                {t('messages.createYourFirstMessage')}
               </Button>
             )}
           </div>
@@ -432,6 +556,7 @@ export default function MessagesLibrary({
       {(showComposer || editingMessage) && (
         <MessageComposer
           message={editingMessage ? library.messages.find(m => m.id === editingMessage) : undefined}
+          templateMessage={templateMessage || undefined}
           library={library}
           beneficiaries={beneficiaries}
           contacts={contacts}
@@ -445,10 +570,12 @@ export default function MessagesLibrary({
             }
             setShowComposer(false)
             setEditingMessage(null)
+            setTemplateMessage(null)
           }}
           onCancel={() => {
             setShowComposer(false)
             setEditingMessage(null)
+            setTemplateMessage(null)
           }}
         />
       )}
@@ -475,12 +602,94 @@ export default function MessagesLibrary({
         <MessageTemplateSelector
           library={library}
           onSelectTemplate={(template) => {
-            // Handle template selection
+            // Create message from template
+            const msgFromTemplate: Partial<PersonalMessage> = {
+              type: template.content.type!,
+              format: template.content.format!,
+              category: template.content.category || 'immediate',
+              title: template.content.title || template.name,
+              content: template.content.content,
+              metadata: {
+                ...template.content.metadata,
+                isTemplate: true,
+                templateId: template.id,
+                templateName: template.name
+              } as any,
+              scheduling: template.content.scheduling,
+              attachments: template.content.attachments || [],
+              locale: template.locale || library.settings.defaultLanguage
+            }
+            
+            setTemplateMessage(msgFromTemplate)
             setShowTemplates(false)
+            setEditingMessage(null)
             setShowComposer(true)
-            // TODO: Populate composer with template
           }}
           onClose={() => setShowTemplates(false)}
+        />
+      )}
+
+      {/* Conditional Rule Builder Modal */}
+      {(showRuleBuilder || editingRule) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">
+                  {editingRule ? 'Edit Conditional Rule' : 'Create Conditional Rule'}
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowRuleBuilder(false)
+                    setEditingRule(null)
+                  }}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+              <ConditionalRuleBuilder
+                rule={editingRule ? library.conditionalRules?.find(r => r.id === editingRule) : undefined}
+                availableMessages={library.messages.map(m => ({ id: m.id, title: m.title }))}
+                availableBeneficiaries={beneficiaries}
+                availableDocuments={[]} // TODO: Add document management
+                onSave={(ruleData) => {
+                  if (editingRule) {
+                    const updatedLibrary = messagesLibraryService.updateConditionalRule(
+                      library,
+                      editingRule,
+                      ruleData
+                    )
+                    onLibraryChange(updatedLibrary)
+                  } else {
+                    const updatedLibrary = messagesLibraryService.createConditionalRule(
+                      library,
+                      ruleData as ConditionalRule
+                    )
+                    onLibraryChange(updatedLibrary)
+                  }
+                  setShowRuleBuilder(false)
+                  setEditingRule(null)
+                }}
+                onCancel={() => {
+                  setShowRuleBuilder(false)
+                  setEditingRule(null)
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Conditional Rule Tester Modal */}
+      {testingRule && (
+        <ConditionalRuleTester
+          rule={library.conditionalRules?.find(r => r.id === testingRule)!}
+          library={library}
+          onClose={() => setTestingRule(null)}
         />
       )}
     </div>

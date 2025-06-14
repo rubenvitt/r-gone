@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>If I'm Gone Password Manager</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <img src="../../assets/icons/icon-32.png" alt="If I'm Gone" />
+                <h1>If I'm Gone</h1>
+            </div>
+            <button id="settings-btn" class="icon-btn" title="Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3m18.364-6.364l-4.243 4.243m-8.242 8.242l-4.243 4.243m0-14.486l4.243 4.243m8.242 8.242l4.243 4.243"></path>
+                </svg>
+            </button>
+        </header>
+
+        <!-- Connection Status -->
+        <div id="connection-status" class="connection-status">
+            <div class="status-indicator"></div>
+            <span class="status-text">Checking connection...</span>
+        </div>
+
+        <!-- Main Content -->
+        <main id="main-content">
+            <!-- Login View -->
+            <div id="login-view" class="view">
+                <div class="login-container">
+                    <h2>Connect to Your Vault</h2>
+                    <p>Enter your master password to access your passwords</p>
+                    
+                    <form id="login-form">
+                        <div class="form-group">
+                            <input 
+                                type="password" 
+                                id="master-password" 
+                                placeholder="Master Password" 
+                                required
+                                autocomplete="current-password"
+                            />
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            Unlock Vault
+                        </button>
+                    </form>
+
+                    <div class="help-link">
+                        <a href="#" id="forgot-password">Forgot master password?</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vault View -->
+            <div id="vault-view" class="view hidden">
+                <!-- Search Bar -->
+                <div class="search-container">
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        placeholder="Search passwords..." 
+                        class="search-input"
+                    />
+                </div>
+
+                <!-- Current Site Section -->
+                <div id="current-site-section" class="section">
+                    <h3>Current Site</h3>
+                    <div id="current-site-passwords" class="password-list">
+                        <!-- Passwords for current site will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <button id="generate-password-btn" class="btn btn-secondary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M12 2v20m10-10H2"></path>
+                        </svg>
+                        Generate Password
+                    </button>
+                    <button id="save-password-btn" class="btn btn-secondary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        Save Password
+                    </button>
+                </div>
+
+                <!-- All Passwords Section -->
+                <div class="section">
+                    <h3>All Passwords</h3>
+                    <div id="all-passwords" class="password-list">
+                        <!-- All passwords will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Password Generator View -->
+            <div id="generator-view" class="view hidden">
+                <h2>Password Generator</h2>
+                
+                <div class="generator-output">
+                    <input 
+                        type="text" 
+                        id="generated-password" 
+                        readonly 
+                        placeholder="Generated password will appear here"
+                    />
+                    <button id="copy-password-btn" class="icon-btn" title="Copy">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="generator-options">
+                    <div class="form-group">
+                        <label for="password-length">Length: <span id="length-value">16</span></label>
+                        <input 
+                            type="range" 
+                            id="password-length" 
+                            min="8" 
+                            max="32" 
+                            value="16"
+                        />
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" id="include-uppercase" checked />
+                            Uppercase Letters (A-Z)
+                        </label>
+                        <label>
+                            <input type="checkbox" id="include-lowercase" checked />
+                            Lowercase Letters (a-z)
+                        </label>
+                        <label>
+                            <input type="checkbox" id="include-numbers" checked />
+                            Numbers (0-9)
+                        </label>
+                        <label>
+                            <input type="checkbox" id="include-symbols" checked />
+                            Symbols (!@#$%^&*)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="generator-actions">
+                    <button id="regenerate-btn" class="btn btn-primary">
+                        Regenerate
+                    </button>
+                    <button id="use-password-btn" class="btn btn-secondary">
+                        Use This Password
+                    </button>
+                    <button id="back-to-vault-btn" class="btn btn-link">
+                        Back to Vault
+                    </button>
+                </div>
+            </div>
+
+            <!-- Save Password View -->
+            <div id="save-password-view" class="view hidden">
+                <h2>Save New Password</h2>
+                
+                <form id="save-password-form">
+                    <div class="form-group">
+                        <label for="site-name">Site Name</label>
+                        <input 
+                            type="text" 
+                            id="site-name" 
+                            placeholder="e.g., Facebook" 
+                            required
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="site-url">URL</label>
+                        <input 
+                            type="url" 
+                            id="site-url" 
+                            placeholder="https://example.com" 
+                            required
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username">Username/Email</label>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            placeholder="your@email.com" 
+                            required
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <div class="password-input-group">
+                            <input 
+                                type="password" 
+                                id="password" 
+                                placeholder="Enter password" 
+                                required
+                            />
+                            <button type="button" id="toggle-password-btn" class="icon-btn">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes">Notes (optional)</label>
+                        <textarea 
+                            id="notes" 
+                            rows="3" 
+                            placeholder="Any additional information..."
+                        ></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            Save Password
+                        </button>
+                        <button type="button" id="cancel-save-btn" class="btn btn-secondary">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer id="footer" class="footer hidden">
+            <button id="lock-vault-btn" class="btn btn-link">
+                Lock Vault
+            </button>
+            <a href="#" id="open-dashboard" class="btn btn-link">
+                Open Dashboard
+            </a>
+        </footer>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

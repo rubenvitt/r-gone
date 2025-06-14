@@ -33,10 +33,19 @@ import {
   Briefcase,
   Palette,
   Sparkles,
-  MoreVertical
+  MoreVertical,
+  Eye
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import RichTextEditor from '@/components/ui/RichTextEditor'
+import RecipientManager from '@/components/ui/RecipientManager'
+import MessagePreview from '@/components/ui/MessagePreview'
+import AudioRecorder from '@/components/ui/AudioRecorder'
+import AudioPlayer from '@/components/ui/AudioPlayer'
+import VideoRecorder from '@/components/ui/VideoRecorder'
+import VideoPlayer from '@/components/ui/VideoPlayer'
+import { audioStorageService } from '@/services/audio-storage-service'
+import { videoStorageService } from '@/services/video-storage-service'
 import {
   PersonalMessage,
   MessagesLibrary,
@@ -57,6 +66,7 @@ import { messagesLibraryService } from '@/services/messages-library-service'
 
 interface MessageComposerProps {
   message?: PersonalMessage
+  templateMessage?: Partial<PersonalMessage>
   library: MessagesLibrary
   beneficiaries?: any[]
   contacts?: any[]
@@ -66,43 +76,122 @@ interface MessageComposerProps {
 
 export default function MessageComposer({
   message,
+  templateMessage,
   library,
   beneficiaries = [],
   contacts = [],
   onSave,
   onCancel
 }: MessageComposerProps) {
+  // Use template if provided, otherwise use message or defaults
+  const initialMessage = templateMessage || message
+  
   // Basic fields
-  const [title, setTitle] = useState(message?.title || '')
-  const [type, setType] = useState<MessageType>(message?.type || 'personal')
-  const [format, setFormat] = useState<MessageFormat>(message?.format || 'text')
-  const [category, setCategory] = useState<MessageCategory>(message?.category || library.settings.defaultCategory)
+  const [title, setTitle] = useState(initialMessage?.title || '')
+  const [type, setType] = useState<MessageType>(initialMessage?.type || 'personal')
+  const [format, setFormat] = useState<MessageFormat>(initialMessage?.format || 'text')
+  const [category, setCategory] = useState<MessageCategory>(initialMessage?.category || library.settings.defaultCategory)
   
   // Content
-  const [textContent, setTextContent] = useState(message?.content.text || '')
-  const [plainTextContent, setPlainTextContent] = useState(message?.content.plainText || '')
+  const [textContent, setTextContent] = useState(initialMessage?.content?.text || '')
+  const [plainTextContent, setPlainTextContent] = useState(initialMessage?.content?.plainText || '')
   
   // Recipients
-  const [recipients, setRecipients] = useState<MessageRecipient[]>(message?.recipients || [])
+  const [recipients, setRecipients] = useState<MessageRecipient[]>(initialMessage?.recipients || [])
   const [showRecipientForm, setShowRecipientForm] = useState(false)
   
   // Metadata
-  const [importance, setImportance] = useState<MessageMetadata['importance']>(message?.metadata.importance || 'medium')
-  const [sensitivity, setSensitivity] = useState<MessageMetadata['sensitivity']>(message?.metadata.sensitivity || 'private')
-  const [tone, setTone] = useState<MessageTone>(message?.metadata.tone || 'neutral')
-  const [language, setLanguage] = useState(message?.locale || library.settings.defaultLanguage)
-  const [keywords, setKeywords] = useState<string[]>(message?.metadata.keywords || [])
+  const [importance, setImportance] = useState<MessageMetadata['importance']>(initialMessage?.metadata?.importance || 'medium')
+  const [sensitivity, setSensitivity] = useState<MessageMetadata['sensitivity']>(initialMessage?.metadata?.sensitivity || 'private')
+  const [tone, setTone] = useState<MessageTone>(initialMessage?.metadata?.tone || 'neutral')
+  const [language, setLanguage] = useState(initialMessage?.locale || library.settings.defaultLanguage)
+  const [keywords, setKeywords] = useState<string[]>(initialMessage?.metadata?.keywords || [])
   
   // Scheduling
-  const [enableScheduling, setEnableScheduling] = useState(!!message?.scheduling)
-  const [schedulingType, setSchedulingType] = useState<SchedulingType>(message?.scheduling?.type || 'immediate')
-  const [deliverAt, setDeliverAt] = useState(message?.scheduling?.deliverAt || '')
-  const [delayHours, setDelayHours] = useState(message?.scheduling?.delayHours || 24)
+  const [enableScheduling, setEnableScheduling] = useState(!!initialMessage?.scheduling)
+  const [schedulingType, setSchedulingType] = useState<SchedulingType>(initialMessage?.scheduling?.type || 'immediate')
+  const [deliverAt, setDeliverAt] = useState(initialMessage?.scheduling?.deliverAt || '')
+  const [delayHours, setDelayHours] = useState(initialMessage?.scheduling?.delayHours || 24)
   
   // UI state
   const [errors, setErrors] = useState<string[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [newKeyword, setNewKeyword] = useState('')
+  const [showPreview, setShowPreview] = useState(false)
+  
+  // Audio state
+  const [audioUrl, setAudioUrl] = useState('')
+  const [audioId, setAudioId] = useState(initialMessage?.content?.audioId || '')
+
+  // Video state
+  const [videoUrl, setVideoUrl] = useState('')
+  const [videoId, setVideoId] = useState(initialMessage?.content?.videoId || '')
+
+  // Handle audio recording complete
+  const handleAudioRecordingComplete = useCallback(async (audioBlob: Blob, audioUrl: string) => {
+    try {
+      // Save audio to storage
+      const id = await audioStorageService.saveAudio(audioBlob, {
+        filename: `message-audio-${Date.now()}.webm`
+      })
+      
+      setAudioId(id)
+      setAudioUrl(audioUrl)
+    } catch (error) {
+      console.error('Failed to save audio:', error)
+      setErrors(['Failed to save audio recording. Please try again.'])
+    }
+  }, [])
+
+  // Handle video recording complete
+  const handleVideoRecordingComplete = useCallback(async (videoBlob: Blob, videoUrl: string) => {
+    try {
+      // Save video to storage
+      const id = await videoStorageService.saveVideo(videoBlob, {
+        filename: `message-video-${Date.now()}.webm`
+      })
+      
+      setVideoId(id)
+      setVideoUrl(videoUrl)
+    } catch (error) {
+      console.error('Failed to save video:', error)
+      setErrors(['Failed to save video recording. Please try again.'])
+    }
+  }, [])
+
+  // Load audio if editing and has audioId
+  useEffect(() => {
+    const loadAudio = async () => {
+      if (audioId && !audioUrl) {
+        try {
+          const audioItem = await audioStorageService.getAudio(audioId)
+          if (audioItem) {
+            setAudioUrl(audioItem.dataUrl)
+          }
+        } catch (error) {
+          console.error('Failed to load audio:', error)
+        }
+      }
+    }
+    loadAudio()
+  }, [audioId, audioUrl])
+
+  // Load video if editing and has videoId
+  useEffect(() => {
+    const loadVideo = async () => {
+      if (videoId && !videoUrl) {
+        try {
+          const videoItem = await videoStorageService.getVideo(videoId)
+          if (videoItem) {
+            setVideoUrl(videoItem.dataUrl)
+          }
+        } catch (error) {
+          console.error('Failed to load video:', error)
+        }
+      }
+    }
+    loadVideo()
+  }, [videoId, videoUrl])
 
   // Message type icons
   const messageTypeIcons: Record<MessageType, any> = {
@@ -127,39 +216,6 @@ export default function MessageComposer({
     spiritual: Sparkles,
     custom: MoreVertical
   }
-
-  // Add recipient
-  const addRecipient = useCallback(() => {
-    const newRecipient: MessageRecipient = {
-      id: crypto.randomUUID(),
-      type: 'email',
-      identifier: '',
-      name: '',
-      priority: recipients.length + 1,
-      deliveryMethod: ['system'],
-      permissions: {
-        canView: true,
-        canDownload: true,
-        canForward: false,
-        canReply: true,
-        canPrint: true
-      }
-    }
-    setRecipients([...recipients, newRecipient])
-    setShowRecipientForm(true)
-  }, [recipients])
-
-  // Update recipient
-  const updateRecipient = useCallback((index: number, updates: Partial<MessageRecipient>) => {
-    const updatedRecipients = [...recipients]
-    updatedRecipients[index] = { ...updatedRecipients[index], ...updates }
-    setRecipients(updatedRecipients)
-  }, [recipients])
-
-  // Remove recipient
-  const removeRecipient = useCallback((index: number) => {
-    setRecipients(recipients.filter((_, i) => i !== index))
-  }, [recipients])
 
   // Add keyword
   const addKeyword = useCallback(() => {
@@ -186,6 +242,14 @@ export default function MessageComposer({
       newErrors.push('Message content is required')
     }
     
+    if (format === 'audio' && !audioId) {
+      newErrors.push('Audio recording is required')
+    }
+    
+    if (format === 'video' && !videoId) {
+      newErrors.push('Video recording is required')
+    }
+    
     if (recipients.length === 0) {
       newErrors.push('At least one recipient is required')
     } else {
@@ -205,7 +269,7 @@ export default function MessageComposer({
 
     setErrors(newErrors)
     return newErrors.length === 0
-  }, [title, format, textContent, recipients, enableScheduling, schedulingType, deliverAt])
+  }, [title, format, textContent, audioId, videoId, recipients, enableScheduling, schedulingType, deliverAt])
 
   // Handle save
   const handleSave = useCallback(() => {
@@ -220,7 +284,9 @@ export default function MessageComposer({
       title: title.trim(),
       content: {
         text: textContent,
-        plainText: plainTextContent || textContent.replace(/<[^>]*>/g, '')
+        plainText: plainTextContent || textContent.replace(/<[^>]*>/g, ''),
+        ...(format === 'audio' && audioId ? { audioId } : {}),
+        ...(format === 'video' && videoId ? { videoId } : {})
       },
       recipients,
       metadata: {
@@ -263,6 +329,17 @@ export default function MessageComposer({
               <X className="h-5 w-5" />
             </Button>
           </div>
+          
+          {templateMessage && initialMessage?.metadata?.templateName && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <FileText className="h-5 w-5 text-blue-600" />
+                <p className="text-sm text-blue-800">
+                  Using template: <strong>{initialMessage.metadata.templateName}</strong>
+                </p>
+              </div>
+            </div>
+          )}
           
           {errors.length > 0 && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -390,117 +467,92 @@ export default function MessageComposer({
             )}
 
             {format === 'audio' && (
-              <div className="p-8 bg-gray-50 rounded-lg text-center">
-                <Mic className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-600">Audio recording coming soon</p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Audio Message *
+                </label>
+                {!audioUrl ? (
+                  <AudioRecorder
+                    onRecordingComplete={handleAudioRecordingComplete}
+                    maxDuration={600} // 10 minutes
+                    showVisualizer={true}
+                  />
+                ) : (
+                  <div className="space-y-4">
+                    <AudioPlayer
+                      src={audioUrl}
+                      title="Your Audio Message"
+                      showDownload={true}
+                      showVolumeControl={true}
+                    />
+                    <div className="flex justify-center">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setAudioUrl('')
+                          setAudioId('')
+                        }}
+                        className="gap-2"
+                      >
+                        <Mic className="h-4 w-4" />
+                        Record New Audio
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {format === 'video' && (
-              <div className="p-8 bg-gray-50 rounded-lg text-center">
-                <Video className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-600">Video recording coming soon</p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Video Message *
+                </label>
+                {!videoUrl ? (
+                  <VideoRecorder
+                    onRecordingComplete={handleVideoRecordingComplete}
+                    maxDuration={600} // 10 minutes
+                    showPreview={true}
+                  />
+                ) : (
+                  <div className="space-y-4">
+                    <VideoPlayer
+                      src={videoUrl}
+                      title="Your Video Message"
+                      showDownload={true}
+                      showVolumeControl={true}
+                      className="aspect-video"
+                    />
+                    <div className="flex justify-center">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setVideoUrl('')
+                          setVideoId('')
+                        }}
+                        className="gap-2"
+                      >
+                        <Video className="h-4 w-4" />
+                        Record New Video
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Recipients */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Recipients *
-                </label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addRecipient}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Recipient
-                </Button>
-              </div>
-
-              {recipients.length === 0 ? (
-                <div className="p-4 bg-gray-50 rounded-lg text-center">
-                  <Users className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm text-gray-600">No recipients added yet</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {recipients.map((recipient, index) => (
-                    <div key={recipient.id} className="p-4 border rounded-lg">
-                      <div className="flex items-start justify-between mb-3">
-                        <h4 className="font-medium">Recipient {index + 1}</h4>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeRecipient(index)}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            Name
-                          </label>
-                          <input
-                            type="text"
-                            value={recipient.name}
-                            onChange={(e) => updateRecipient(index, { name: e.target.value })}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="Recipient name"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            Email/ID
-                          </label>
-                          <input
-                            type="text"
-                            value={recipient.identifier}
-                            onChange={(e) => updateRecipient(index, { identifier: e.target.value })}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="Email or identifier"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            Type
-                          </label>
-                          <select
-                            value={recipient.type}
-                            onChange={(e) => updateRecipient(index, { type: e.target.value as RecipientType })}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          >
-                            <option value="email">Email</option>
-                            <option value="beneficiary">Beneficiary</option>
-                            <option value="contact">Contact</option>
-                            <option value="executor">Executor</option>
-                            <option value="lawyer">Lawyer</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            Relationship
-                          </label>
-                          <input
-                            type="text"
-                            value={recipient.relationship || ''}
-                            onChange={(e) => updateRecipient(index, { relationship: e.target.value })}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="e.g., Spouse, Child, Friend"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Recipients *
+              </label>
+              <RecipientManager
+                recipients={recipients}
+                beneficiaries={beneficiaries}
+                contacts={contacts}
+                onRecipientsChange={setRecipients}
+                mode="inline"
+              />
             </div>
 
             {/* Scheduling */}
@@ -711,6 +763,17 @@ export default function MessageComposer({
             <div className="flex space-x-2">
               <Button
                 variant="outline"
+                onClick={() => {
+                  if (validateForm()) {
+                    setShowPreview(true)
+                  }
+                }}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Preview
+              </Button>
+              <Button
+                variant="outline"
                 onClick={handleSave}
               >
                 <Save className="h-4 w-4 mr-2" />
@@ -731,6 +794,46 @@ export default function MessageComposer({
           </div>
         </div>
       </div>
+      
+      {/* Message Preview Modal */}
+      {showPreview && (
+        <MessagePreview
+          message={{
+            type,
+            format,
+            category,
+            title: title.trim(),
+            content: {
+              text: textContent,
+              plainText: plainTextContent || textContent.replace(/<[^>]*>/g, ''),
+              ...(format === 'audio' && audioId ? { audioId } : {}),
+              ...(format === 'video' && videoId ? { videoId } : {})
+            },
+            recipients,
+            metadata: {
+              importance,
+              sensitivity,
+              language,
+              keywords,
+              tone,
+              readTime: Math.ceil(textContent.replace(/<[^>]*>/g, '').split(/\s+/).length / 200)
+            },
+            scheduling: enableScheduling ? {
+              type: schedulingType,
+              deliverAt: schedulingType === 'scheduled' ? deliverAt : undefined,
+              delayHours: schedulingType === 'delayed' ? delayHours : undefined
+            } : undefined,
+            locale: language
+          }}
+          library={library}
+          onClose={() => setShowPreview(false)}
+          onSend={() => {
+            handleSave()
+            setShowPreview(false)
+            // TODO: Also schedule the message
+          }}
+        />
+      )}
     </div>
   )
 }

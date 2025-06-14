@@ -12,11 +12,14 @@ import {
   Star, 
   StarOff,
   Settings,
-  Key
+  Key,
+  Upload
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PasswordEntry, PasswordVault as PasswordVaultType, PasswordCategory, PasswordStrength } from '@/types/data'
 import { passwordVaultService } from '@/services/password-vault-service'
+import { passwordImportService } from '@/services/password-import-service'
+import PasswordImportDialog from './PasswordImportDialog'
 
 interface PasswordVaultProps {
   vault: PasswordVaultType
@@ -34,6 +37,7 @@ export default function PasswordVault({ vault, onVaultChange, className = '' }: 
   const [selectedEntry, setSelectedEntry] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set())
 
   // Filter and sort entries
@@ -160,6 +164,21 @@ export default function PasswordVault({ vault, onVaultChange, className = '' }: 
     return iconMap[category] || '📋'
   }, [])
 
+  // Handle import completion
+  const handleImportComplete = useCallback(async (entries: PasswordEntry[]) => {
+    try {
+      const updatedVault = await passwordImportService.importEntries(
+        vault,
+        entries,
+        { skipDuplicates: true, updateExisting: false }
+      )
+      onVaultChange(updatedVault)
+      setShowImportDialog(false)
+    } catch (error) {
+      console.error('Failed to import passwords:', error)
+    }
+  }, [vault, onVaultChange])
+
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Header with Stats */}
@@ -170,6 +189,14 @@ export default function PasswordVault({ vault, onVaultChange, className = '' }: 
             <h2 className="text-xl font-semibold">Password Vault</h2>
           </div>
           <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowImportDialog(true)}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -341,6 +368,14 @@ export default function PasswordVault({ vault, onVaultChange, className = '' }: 
           onCancel={() => setShowSettings(false)}
         />
       )}
+
+      {/* Import Dialog */}
+      <PasswordImportDialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImportComplete={handleImportComplete}
+        currentVault={vault}
+      />
     </div>
   )
 }
@@ -519,7 +554,13 @@ function PasswordEntryForm({ entry, onSave, onCancel }: PasswordEntryFormProps) 
 }
 
 // Settings Modal - placeholder for future implementation
-function PasswordVaultSettings({ vault, onSave, onCancel }: any) {
+interface PasswordVaultSettingsProps {
+  vault: PasswordVaultType
+  onSave: (vault: PasswordVaultType) => void
+  onCancel: () => void
+}
+
+function PasswordVaultSettings({ vault, onSave, onCancel }: PasswordVaultSettingsProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg p-6 max-w-md w-full">

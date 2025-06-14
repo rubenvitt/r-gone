@@ -20,7 +20,8 @@ import {
   MessageAttachment,
   RecipientType,
   MessagePermissions,
-  MessageTone
+  MessageTone,
+  ConditionalRule
 } from '@/types/data'
 
 export interface MessageCreateOptions {
@@ -57,6 +58,7 @@ export class MessagesLibraryService {
       templates: this.getDefaultTemplates(),
       categories: ['immediate', 'timed', 'conditional', 'milestone', 'recurring', 'manual'],
       deliveryLogs: [],
+      conditionalRules: [],
       settings: {
         defaultFormat: 'text',
         defaultCategory: 'immediate',
@@ -840,6 +842,139 @@ Attorney: {{attorneyInfo}}</p>
     return {
       ...library,
       statistics: stats
+    }
+  }
+
+  /**
+   * Create a new conditional rule
+   */
+  createConditionalRule(library: MessagesLibrary, rule: ConditionalRule): MessagesLibrary {
+    const newRule: ConditionalRule = {
+      ...rule,
+      id: rule.id || crypto.randomUUID(),
+      enabled: rule.enabled ?? true,
+      priority: rule.priority || 1,
+      metadata: {
+        ...rule.metadata,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    }
+
+    const conditionalRules = [...(library.conditionalRules || []), newRule]
+    
+    return {
+      ...library,
+      conditionalRules: conditionalRules.sort((a, b) => a.priority - b.priority)
+    }
+  }
+
+  /**
+   * Update an existing conditional rule
+   */
+  updateConditionalRule(library: MessagesLibrary, ruleId: string, updates: Partial<ConditionalRule>): MessagesLibrary {
+    const conditionalRules = (library.conditionalRules || []).map(rule => {
+      if (rule.id === ruleId) {
+        return {
+          ...rule,
+          ...updates,
+          id: rule.id, // Preserve ID
+          metadata: {
+            ...rule.metadata,
+            ...updates.metadata,
+            updatedAt: new Date().toISOString()
+          }
+        }
+      }
+      return rule
+    })
+
+    return {
+      ...library,
+      conditionalRules: conditionalRules.sort((a, b) => a.priority - b.priority)
+    }
+  }
+
+  /**
+   * Delete a conditional rule
+   */
+  deleteConditionalRule(library: MessagesLibrary, ruleId: string): MessagesLibrary {
+    const conditionalRules = (library.conditionalRules || []).filter(rule => rule.id !== ruleId)
+    
+    return {
+      ...library,
+      conditionalRules
+    }
+  }
+
+  /**
+   * Find rules that match current conditions
+   */
+  findMatchingRules(library: MessagesLibrary, context: any): ConditionalRule[] {
+    if (!library.conditionalRules) return []
+    
+    return library.conditionalRules
+      .filter(rule => rule.enabled)
+      .sort((a, b) => a.priority - b.priority)
+  }
+
+  /**
+   * Get rule by ID
+   */
+  getConditionalRule(library: MessagesLibrary, ruleId: string): ConditionalRule | undefined {
+    return library.conditionalRules?.find(rule => rule.id === ruleId)
+  }
+
+  /**
+   * Enable/disable a rule
+   */
+  toggleConditionalRule(library: MessagesLibrary, ruleId: string): MessagesLibrary {
+    const rule = this.getConditionalRule(library, ruleId)
+    if (!rule) return library
+    
+    return this.updateConditionalRule(library, ruleId, { enabled: !rule.enabled })
+  }
+
+  /**
+   * Update rule statistics after execution
+   */
+  updateRuleStatistics(library: MessagesLibrary, ruleId: string, success: boolean): MessagesLibrary {
+    return this.updateConditionalRule(library, ruleId, {
+      metadata: {
+        lastTriggered: new Date().toISOString(),
+        triggerCount: ((library.conditionalRules?.find(r => r.id === ruleId)?.metadata?.triggerCount || 0) + 1) as any,
+        lastStatus: success ? 'success' : 'failed'
+      }
+    })
+  }
+
+  /**
+   * Export rules to JSON
+   */
+  exportRules(library: MessagesLibrary): string {
+    return JSON.stringify(library.conditionalRules || [], null, 2)
+  }
+
+  /**
+   * Import rules from JSON
+   */
+  importRules(library: MessagesLibrary, rulesJson: string): MessagesLibrary {
+    try {
+      const rules = JSON.parse(rulesJson) as ConditionalRule[]
+      return {
+        ...library,
+        conditionalRules: rules.map(rule => ({
+          ...rule,
+          id: crypto.randomUUID(), // Generate new IDs to avoid conflicts
+          metadata: {
+            ...rule.metadata,
+            importedAt: new Date().toISOString()
+          }
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to import rules:', error)
+      return library
     }
   }
 }

@@ -1,8 +1,23 @@
-import * as openpgp from 'openpgp';
+'use client'
+
+// Dynamic import to avoid SSR issues
+let openpgp: any = null;
+
+async function getOpenPGP() {
+  if (!openpgp && typeof window !== 'undefined') {
+    openpgp = await import('openpgp');
+  }
+  return openpgp;
+}
 
 export async function encryptData(data: string, passphrase: string) {
-  const encrypted = await openpgp.encrypt({
-    message: await openpgp.createMessage({ text: data }),
+  const pgp = await getOpenPGP();
+  if (!pgp) {
+    throw new Error('OpenPGP is not available in this environment');
+  }
+  
+  const encrypted = await pgp.encrypt({
+    message: await pgp.createMessage({ text: data }),
     passwords: [passphrase],
     format: 'armored',
   });
@@ -10,10 +25,15 @@ export async function encryptData(data: string, passphrase: string) {
 }
 
 export async function decryptData(encryptedData: string, passphrase: string) {
-  const message = await openpgp.readMessage({
+  const pgp = await getOpenPGP();
+  if (!pgp) {
+    throw new Error('OpenPGP is not available in this environment');
+  }
+  
+  const message = await pgp.readMessage({
     armoredMessage: encryptedData,
   });
-  const { data: decrypted } = await openpgp.decrypt({
+  const { data: decrypted } = await pgp.decrypt({
     message,
     passwords: [passphrase],
   });

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { FileListItem, FileMetadata, SaveResult } from '@/services/file-service'
+import { FileListItem, FileMetadata, SaveResult } from '@/services/file-service-client'
 
 export interface FileServiceState {
   isLoading: boolean

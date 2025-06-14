@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from "@/components/ui/Header";
 import Footer from "@/components/ui/Footer";
 import EncryptedEditor from "@/components/ui/EncryptedEditor";
@@ -11,16 +11,23 @@ import DeadManSwitchManager from "@/components/ui/DeadManSwitchManager";
 import { AccountRecoveryManager } from "@/components/ui/AccountRecoveryManager";
 import ContactDirectory from "@/components/ui/ContactDirectory";
 import DigitalAssetInventory from "@/components/ui/DigitalAssetInventory";
+import MessagesLibraryWrapper from "@/components/ui/MessagesLibraryWrapper";
+import Dashboard from "@/components/ui/Dashboard";
 import AuthGuard from "@/components/ui/AuthGuard";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, FolderOpen, Shield, AlertTriangle, Clock, LogOut, KeyRound, Users, Package } from 'lucide-react';
+import { ComplianceReportingDashboard } from "@/components/ui/ComplianceReportingDashboard";
+import TriggerEvaluationManager from "@/components/ui/TriggerEvaluationManager";
+import LegalDocumentManager from "@/components/ui/LegalDocumentManager";
+import { PlusCircle, FolderOpen, Shield, AlertTriangle, Clock, LogOut, KeyRound, Users, Package, BarChart3, MessageSquare, FileCheck, Zap, Gavel } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { ContactDirectory as ContactDirectoryType, DigitalAssetInventory as DigitalAssetInventoryType } from '@/types/data';
 import { contactDirectoryService } from '@/services/contact-directory-service';
 import { digitalAssetInventoryService } from '@/services/digital-asset-inventory-service';
+import { fileService } from '@/services/file-service-client';
+import { messagesLibraryClient } from '@/services/messages-library-client';
 
 export default function Home() {
-  const [view, setView] = useState<'editor' | 'files' | 'backup' | 'emergency' | 'deadmanswitch' | 'recovery' | 'contacts' | 'assets'>('editor')
+  const [view, setView] = useState<'dashboard' | 'editor' | 'files' | 'backup' | 'emergency' | 'deadmanswitch' | 'recovery' | 'contacts' | 'assets' | 'messages' | 'compliance' | 'triggers' | 'legal'>('dashboard')
   const [selectedFileId, setSelectedFileId] = useState<string>('')
   const [contactDirectory, setContactDirectory] = useState<ContactDirectoryType>(() => 
     contactDirectoryService.createEmptyDirectory()
@@ -28,7 +35,28 @@ export default function Home() {
   const [digitalAssetInventory, setDigitalAssetInventory] = useState<DigitalAssetInventoryType>(() => 
     digitalAssetInventoryService.createEmptyInventory()
   )
+  const [filesCount, setFilesCount] = useState(0)
+  const [messagesCount, setMessagesCount] = useState(0)
   const { logout } = useAuth()
+
+  // Load counts on mount
+  useEffect(() => {
+    const loadCounts = async () => {
+      try {
+        // Load files count
+        const files = await fileService.listFiles()
+        setFilesCount(files.filter(f => !f.isBackup).length)
+
+        // Load messages count
+        const messages = await messagesLibraryClient.listMessages()
+        setMessagesCount(messages.length)
+      } catch (error) {
+        console.error('Failed to load counts:', error)
+      }
+    }
+
+    loadCounts()
+  }, [])
 
   const handleLogout = async () => {
     if (confirm('Are you sure you want to logout? Any unsaved changes will be lost.')) {
@@ -36,10 +64,17 @@ export default function Home() {
     }
   }
 
+  const handleNavigate = (targetView: string, itemId?: string) => {
+    setView(targetView as any)
+    if (itemId && targetView === 'files') {
+      setSelectedFileId(itemId)
+    }
+  }
+
   return (
     <AuthGuard>
       <div className="flex flex-col min-h-screen">
-        <Header />
+        <Header onNavigate={handleNavigate} />
         <main className="flex-grow p-8">
           <div className="max-w-6xl mx-auto">
             <div className="flex justify-between items-center mb-8">
@@ -58,6 +93,15 @@ export default function Home() {
             {/* Navigation */}
             <div className="flex justify-center mb-8">
               <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg">
+                <Button
+                  variant={view === 'dashboard' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setView('dashboard')}
+                  className="flex items-center space-x-2"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Dashboard</span>
+                </Button>
                 <Button
                   variant={view === 'editor' ? 'default' : 'ghost'}
                   size="sm"
@@ -130,11 +174,57 @@ export default function Home() {
                   <Package className="h-4 w-4" />
                   <span>Digital Assets</span>
                 </Button>
+                <Button
+                  variant={view === 'messages' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setView('messages')}
+                  className="flex items-center space-x-2"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Messages</span>
+                </Button>
+                <Button
+                  variant={view === 'compliance' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setView('compliance')}
+                  className="flex items-center space-x-2"
+                >
+                  <FileCheck className="h-4 w-4" />
+                  <span>Compliance</span>
+                </Button>
+                <Button
+                  variant={view === 'triggers' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setView('triggers')}
+                  className="flex items-center space-x-2"
+                >
+                  <Zap className="h-4 w-4" />
+                  <span>Triggers</span>
+                </Button>
+                <Button
+                  variant={view === 'legal' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setView('legal')}
+                  className="flex items-center space-x-2"
+                >
+                  <Gavel className="h-4 w-4" />
+                  <span>Legal</span>
+                </Button>
               </div>
             </div>
 
             <div className="space-y-6">
-              {view === 'editor' ? (
+              {view === 'dashboard' ? (
+                <div>
+                  <Dashboard 
+                    onNavigate={setView}
+                    contactsCount={contactDirectory.contacts.length}
+                    assetsCount={digitalAssetInventory.assets.length}
+                    filesCount={filesCount}
+                    messagesCount={messagesCount}
+                  />
+                </div>
+              ) : view === 'editor' ? (
                 <div>
                   <h2 className="text-xl font-semibold mb-4">Emergency Information</h2>
                   <p className="text-gray-600 mb-6">
@@ -182,14 +272,33 @@ export default function Home() {
                     onDirectoryChange={setContactDirectory}
                   />
                 </div>
-              ) : (
+              ) : view === 'messages' ? (
+                <div>
+                  <MessagesLibraryWrapper 
+                    beneficiaries={[]} // TODO: Connect to actual beneficiaries
+                    contacts={contactDirectory.contacts}
+                  />
+                </div>
+              ) : view === 'assets' ? (
                 <div>
                   <DigitalAssetInventory 
                     inventory={digitalAssetInventory}
                     onInventoryChange={setDigitalAssetInventory}
                   />
                 </div>
-              )}
+              ) : view === 'compliance' ? (
+                <div>
+                  <ComplianceReportingDashboard />
+                </div>
+              ) : view === 'triggers' ? (
+                <div>
+                  <TriggerEvaluationManager />
+                </div>
+              ) : view === 'legal' ? (
+                <div>
+                  <LegalDocumentManager />
+                </div>
+              ) : null}
             </div>
           </div>
         </main>

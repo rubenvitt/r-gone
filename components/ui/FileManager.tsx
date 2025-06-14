@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Search, Filter, Trash2, FileText, Calendar, HardDrive, AlertTriangle, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useFileService } from '@/hooks/useFileService'
-import { FileListItem } from '@/services/file-service'
+import { FileListItem } from '@/services/file-service-client'
 
 interface FileManagerProps {
   onFileSelect?: (fileId: string) => void

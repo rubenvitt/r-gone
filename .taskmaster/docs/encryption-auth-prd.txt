@@ -1,0 +1,171 @@
+# Product Requirements Document: Ende-zu-Ende Verschlüsselung und Authentifizierung
+
+<context>
+# Übersicht
+Dieses PRD definiert die Implementierung einer vollständigen Ende-zu-Ende-Verschlüsselung für alle Daten im "If I'm Gone" System sowie ein robustes Authentifizierungssystem, das auf einem Master-Passwort basiert. Das Ziel ist es, alle sensitiven Daten zu schützen und gleichzeitig eine nahtlose Benutzererfahrung zu gewährleisten.
+
+# Kernprobleme
+1. **Unvollständige Verschlüsselung**: Aktuell werden nur spezifische Tasks verschlüsselt, nicht alle Daten
+2. **Fehlende Passwort-Validierung**: Das Login-Passwort wird nicht geprüft - jedes Passwort funktioniert
+3. **Getrennte Systeme**: Keine Verbindung zwischen Login-Passwort und Verschlüsselung
+4. **UX-Probleme**: Nach Login muss die Seite manuell neu geladen werden
+
+# Lösungsansatz
+Ein einheitliches Master-Passwort-System, das sowohl für die Authentifizierung als auch für die Verschlüsselung aller Daten verwendet wird. Dies gewährleistet maximale Sicherheit bei minimaler Komplexität für den Benutzer.
+</context>
+
+<PRD>
+# Technische Architektur
+
+## Master-Passwort-System
+- **Single Password**: Ein Master-Passwort für Login und Verschlüsselung
+- **Key Derivation**: PBKDF2/Argon2 für sichere Schlüssel-Ableitung
+- **Password Hashing**: bcrypt/scrypt für Authentifizierungs-Hash
+- **Session Keys**: Temporäre Schlüssel aus Master-Key abgeleitet
+- **Zero-Knowledge**: Server kennt nie das Klartext-Passwort
+
+## Verschlüsselungsarchitektur
+- **Algorithmus**: AES-256-GCM für symmetrische Verschlüsselung
+- **Key Management**: Verschlüsselte Speicherung des Master-Keys in Session
+- **Data Scope**: ALLE Daten werden verschlüsselt:
+  - Nachrichten und Instructions
+  - Passwort-Vault Einträge
+  - Hochgeladene Dateien
+  - Empfänger-Informationen
+  - Audit-Logs
+  - Session-Daten
+- **Metadaten**: Nur Dateinamen und IDs bleiben unverschlüsselt
+
+## Datenfluss
+```
+1. Login → Passwort-Eingabe
+2. Passwort-Hash-Vergleich → Authentifizierung
+3. Key Derivation → Master-Encryption-Key
+4. Session-Token → Verschlüsselter Master-Key
+5. Alle Operationen → Auto-Decrypt/Encrypt mit Session-Key
+```
+
+# Development Roadmap
+
+## Phase 1: Authentifizierungssystem (Kritisch)
+- **Passwort-Speicherung**: Hash-basierte Speicherung implementieren
+- **Login-Validierung**: Echte Passwort-Überprüfung
+- **Session-Management**: Token mit verschlüsseltem Master-Key
+- **Auto-Redirect**: Automatische Weiterleitung nach Login
+- **First-Run Setup**: Initiales Passwort-Setup für neue Installationen
+
+## Phase 2: Universelle Verschlüsselung
+- **Crypto-Wrapper**: Service für alle Datei-Operationen
+- **Auto-Encryption**: Transparente Ver-/Entschlüsselung
+- **Data Migration**: Tool für bestehende Daten
+- **Backup System**: Verschlüsselte Backups vor Migration
+- **Performance**: Caching für häufig genutzte Daten
+
+## Phase 3: Erweiterte Features
+- **Share-Links**: Verschlüsselte URLs mit eingebettetem Key
+- **Emergency Access**: Zeitverzögerter Zugriff für Notfälle
+- **Key Rotation**: Passwort-Änderung mit Re-Encryption
+- **Multi-Device**: Sync über verschlüsselte Exports
+- **Audit Trail**: Verschlüsselte Zugriffsprotokolle
+
+# Implementierungsdetails
+
+## Authentifizierung
+1. **Password Storage**:
+   ```
+   - Hash-Funktion: bcrypt (cost factor 12)
+   - Salt: Automatisch generiert pro Installation
+   - Storage: data/auth/master.auth.json (verschlüsselt)
+   ```
+
+2. **Session Management**:
+   ```
+   - Token: JWT mit verschlüsseltem Master-Key
+   - Expiry: 24 Stunden (konfigurierbar)
+   - Storage: HttpOnly Cookie + Session File
+   - Refresh: Automatisch bei Aktivität
+   ```
+
+## Verschlüsselung
+1. **File Service Integration**:
+   ```typescript
+   - Wrapper um bestehenden FileService
+   - Automatische Encryption bei write()
+   - Automatische Decryption bei read()
+   - Fallback für Migrations-Phase
+   ```
+
+2. **Key Management**:
+   ```
+   - Master-Key: Niemals im Klartext gespeichert
+   - Session-Key: In-Memory während Session
+   - Link-Keys: Einmal-Verwendung mit Timeout
+   ```
+
+## Migration
+1. **Daten-Migration**:
+   - Backup aller unverschlüsselten Daten
+   - Batch-Verschlüsselung beim ersten Login
+   - Verifizierung der migrierten Daten
+   - Rollback-Option bei Fehlern
+
+2. **Kompatibilität**:
+   - Erkennung unverschlüsselter Legacy-Daten
+   - Transparente Migration on-the-fly
+   - Keine Breaking Changes für bestehende Nutzer
+
+# Sicherheitsüberlegungen
+
+## Threat Model
+- **Angreifer mit Dateizugriff**: Alle Daten verschlüsselt
+- **Brute-Force Angriffe**: Rate-Limiting + starke Hash-Funktion
+- **Memory Dumps**: Minimale Key-Exposure, sichere Löschung
+- **Session Hijacking**: HttpOnly Cookies, CSRF-Protection
+
+## Best Practices
+- Kein Klartext-Passwort im Memory länger als nötig
+- Sichere Zufallszahlen für alle kryptografischen Operationen
+- Regelmäßige Security-Audits der Crypto-Implementierung
+- Clear separation zwischen Auth und Encryption Keys
+
+# User Experience
+
+## Login Flow
+1. Passwort-Eingabe → Sofortige Validierung
+2. Erfolg → Automatischer Redirect zur App
+3. Fehler → Klare Fehlermeldung mit Retry-Limit
+4. First-Run → Guided Setup mit Passwort-Stärke-Indikator
+
+## Transparenz
+- Verschlüsselungs-Status-Indikator in UI
+- Klare Meldungen bei Migrations-Vorgängen
+- Performance-Indikatoren bei großen Operationen
+- Backup-Erinnerungen vor kritischen Änderungen
+
+# Risiken und Mitigationen
+
+## Risiko: Passwort-Verlust
+- **Mitigation**: 
+  - Recovery-Code bei Ersteinrichtung
+  - Verschlüsselter Recovery-Key Export
+  - Klare Warnungen über Unwiederbringlichkeit
+
+## Risiko: Performance-Einbußen
+- **Mitigation**:
+  - Intelligentes Caching entschlüsselter Daten
+  - Streaming-Verschlüsselung für große Dateien
+  - Background-Workers für Batch-Operationen
+
+## Risiko: Migrations-Fehler
+- **Mitigation**:
+  - Automatische Backups vor Migration
+  - Transaktionale Migration mit Rollback
+  - Detaillierte Logs für Debugging
+
+# Metriken für Erfolg
+- 100% aller Daten verschlüsselt
+- Login-Zeit < 2 Sekunden
+- Keine spürbaren Performance-Einbußen
+- Zero-Downtime Migration
+- Keine Datenverluste während Migration
+</PRD>

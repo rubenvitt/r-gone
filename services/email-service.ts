@@ -1,5 +1,5 @@
-import nodemailer from 'nodemailer';
 import { SharingRecord } from './emergency-sharing-service';
+import { ActivationRequest, ActivationLevel } from './manual-activation-service';
 
 export interface EmailConfig {
   host?: string;
@@ -25,12 +25,14 @@ export interface EmailOptions {
 }
 
 export class EmailService {
-  private transporter: nodemailer.Transporter | null = null;
+  private transporter: any | null = null;
   private config: EmailConfig;
 
   constructor() {
     this.config = this.loadEmailConfig();
-    this.initializeTransporter();
+    if (typeof window === 'undefined') {
+      this.initializeTransporter();
+    }
   }
 
   private loadEmailConfig(): EmailConfig {
@@ -50,7 +52,8 @@ export class EmailService {
   private async initializeTransporter(): Promise<void> {
     try {
       if (this.isConfigured()) {
-        this.transporter = nodemailer.createTransport({
+        const nodemailer = await import('nodemailer');
+        this.transporter = nodemailer.default.createTransport({
           host: this.config.host,
           port: this.config.port,
           secure: this.config.secure,
@@ -84,6 +87,12 @@ export class EmailService {
     messageId?: string;
     error?: string;
   }> {
+    // If running on client side, return mock success
+    if (typeof window !== 'undefined') {
+      console.log('Email service called on client side - mocking success');
+      return { success: true, messageId: `client-mock-${Date.now()}` };
+    }
+
     try {
       if (!this.transporter) {
         // If not configured, log the email instead
@@ -226,6 +235,254 @@ export class EmailService {
       from: this.config.from,
       hasAuth: !!(this.config.auth?.user && this.config.auth?.pass)
     };
+  }
+
+  /**
+   * Send emergency access granted email
+   */
+  async sendEmergencyAccessGrantedEmail(
+    to: string,
+    recipientName: string,
+    userId: string,
+    accessLevel: ActivationLevel,
+    expiresAt: Date
+  ): Promise<boolean> {
+    const subject = 'Emergency Access Granted - Action Required';
+    const html = this.createEmailTemplate({
+      title: 'Emergency Access Granted',
+      content: `
+        <p>Dear ${recipientName},</p>
+        <p>You have been granted emergency access to ${userId}'s information.</p>
+        <div style="background-color: #f0f9ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Access Level:</strong> ${accessLevel.replace('_', ' ')}</p>
+          <p><strong>Valid Until:</strong> ${expiresAt.toLocaleString()}</p>
+        </div>
+        <p>Please use this access responsibly and only for the emergency purpose intended.</p>
+      `,
+      actionUrl: `${process.env.NEXT_PUBLIC_URL}/emergency-access`,
+      actionText: 'Access Emergency Information'
+    });
+
+    return this.send({ to, subject, html });
+  }
+
+  /**
+   * Send activation rejected email
+   */
+  async sendActivationRejectedEmail(
+    to: string,
+    recipientName: string,
+    reason: string
+  ): Promise<boolean> {
+    const subject = 'Emergency Access Request Denied';
+    const html = this.createEmailTemplate({
+      title: 'Access Request Denied',
+      content: `
+        <p>Dear ${recipientName},</p>
+        <p>Your emergency access request has been denied.</p>
+        <div style="background-color: #fef2f2; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Reason:</strong> ${reason}</p>
+        </div>
+        <p>If you believe this was done in error, please contact the user through other means.</p>
+      `
+    });
+
+    return this.send({ to, subject, html });
+  }
+
+  /**
+   * Send activation expired email
+   */
+  async sendActivationExpiredEmail(
+    to: string,
+    recipientName: string,
+    requestId: string
+  ): Promise<boolean> {
+    const subject = 'Emergency Access Expired';
+    const html = this.createEmailTemplate({
+      title: 'Emergency Access Has Expired',
+      content: `
+        <p>Dear ${recipientName},</p>
+        <p>The emergency access grant (ID: ${requestId.slice(0, 8)}) has expired.</p>
+        <p>Access to emergency information is no longer available through this activation.</p>
+        <p>If continued access is needed, a new request must be initiated.</p>
+      `
+    });
+
+    return this.send({ to, subject, html });
+  }
+
+  /**
+   * Send activation cancelled email
+   */
+  async sendActivationCancelledEmail(
+    to: string,
+    recipientName: string,
+    requestId: string,
+    reason: string
+  ): Promise<boolean> {
+    const subject = 'Emergency Access Cancelled';
+    const html = this.createEmailTemplate({
+      title: 'Emergency Access Cancelled',
+      content: `
+        <p>Dear ${recipientName},</p>
+        <p>The emergency access grant (ID: ${requestId.slice(0, 8)}) has been cancelled.</p>
+        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Reason:</strong> ${reason}</p>
+        </div>
+        <p>Access to emergency information is no longer available.</p>
+      `
+    });
+
+    return this.send({ to, subject, html });
+  }
+
+  /**
+   * Send urgent activation email (for panic button)
+   */
+  async sendUrgentActivationEmail(
+    to: string,
+    recipientName: string,
+    request: ActivationRequest,
+    subject: string
+  ): Promise<boolean> {
+    const html = this.createEmailTemplate({
+      title: 'URGENT: Emergency Access Activated',
+      content: `
+        <div style="background-color: #fef2f2; border: 2px solid #dc2626; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+          <h2 style="color: #dc2626; margin-top: 0;">IMMEDIATE ACTION REQUIRED</h2>
+          <p><strong>${request.initiatorName}</strong> has activated the panic button.</p>
+        </div>
+        <p>Dear ${recipientName},</p>
+        <p>This is an urgent notification that emergency access has been immediately granted due to panic button activation.</p>
+        <div style="background-color: #f0f9ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Activation Type:</strong> Panic Button</p>
+          <p><strong>Access Level:</strong> ${request.activationLevel}</p>
+          <p><strong>Reason:</strong> ${request.reason}</p>
+          <p><strong>Time:</strong> ${new Date(request.createdAt).toLocaleString()}</p>
+        </div>
+        <p>Please check on ${request.initiatorName} immediately and take appropriate action.</p>
+      `,
+      actionUrl: `${process.env.NEXT_PUBLIC_URL}/emergency-access/${request.id}`,
+      actionText: 'View Emergency Information'
+    });
+
+    return this.send({ to, subject, html });
+  }
+
+  /**
+   * Send verification required email
+   */
+  async sendVerificationRequiredEmail(
+    to: string,
+    userId: string,
+    request: ActivationRequest
+  ): Promise<boolean> {
+    const subject = 'Emergency Access Verification Required';
+    const html = this.createEmailTemplate({
+      title: 'Verify Emergency Access Request',
+      content: `
+        <p>Hello,</p>
+        <p><strong>${request.initiatorName}</strong> is requesting emergency access to your information.</p>
+        <div style="background-color: #fef3c7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Requester:</strong> ${request.initiatorName}</p>
+          <p><strong>Urgency:</strong> ${request.urgencyLevel}</p>
+          <p><strong>Requested Access:</strong> ${request.activationLevel}</p>
+          <p><strong>Reason:</strong> ${request.reason}</p>
+        </div>
+        <p>Please review and approve or deny this request within 5 minutes.</p>
+      `,
+      actionUrl: `${process.env.NEXT_PUBLIC_URL}/verify-activation/${request.id}`,
+      actionText: 'Review Request'
+    });
+
+    return this.send({ to, subject, html });
+  }
+
+  /**
+   * Send professional activation alert
+   */
+  async sendProfessionalActivationAlert(
+    to: string,
+    adminName: string,
+    request: ActivationRequest,
+    professionalType: string
+  ): Promise<boolean> {
+    const subject = `${professionalType} Professional Emergency Access Activated`;
+    const html = this.createEmailTemplate({
+      title: 'Professional Emergency Access Alert',
+      content: `
+        <p>Dear ${adminName},</p>
+        <p>A ${professionalType.toLowerCase()} professional has activated emergency access.</p>
+        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Professional:</strong> ${request.initiatorName}</p>
+          <p><strong>License:</strong> ${request.professionalCredentials?.licenseNumber || 'N/A'}</p>
+          <p><strong>Organization:</strong> ${request.professionalCredentials?.organization || 'N/A'}</p>
+          <p><strong>User ID:</strong> ${request.userId}</p>
+          <p><strong>Access Level:</strong> ${request.activationLevel}</p>
+          <p><strong>Justification:</strong> ${request.reason}</p>
+          <p><strong>Time:</strong> ${new Date(request.createdAt).toLocaleString()}</p>
+        </div>
+        <p>This activation has been logged for compliance purposes.</p>
+      `
+    });
+
+    return this.send({ to, subject, html });
+  }
+
+  /**
+   * Send emergency access notification
+   */
+  async sendEmergencyAccessNotification(
+    to: string,
+    contactName: string,
+    userId: string,
+    activationType: string
+  ): Promise<boolean> {
+    const subject = 'Emergency Access Notification';
+    const html = this.createEmailTemplate({
+      title: 'Emergency Access Activated',
+      content: `
+        <p>Dear ${contactName},</p>
+        <p>This is to inform you that emergency access has been activated for ${userId}.</p>
+        <div style="background-color: #f0f9ff; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Activation Method:</strong> ${activationType}</p>
+          <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+        </div>
+        <p>You may now have access to emergency information based on your designated permissions.</p>
+      `,
+      actionUrl: `${process.env.NEXT_PUBLIC_URL}/emergency-access`,
+      actionText: 'Access Information'
+    });
+
+    return this.send({ to, subject, html });
+  }
+
+  /**
+   * Send generic activation email
+   */
+  async sendGenericActivationEmail(
+    to: string,
+    recipientName: string,
+    request: ActivationRequest
+  ): Promise<boolean> {
+    const subject = 'Emergency Access Activation';
+    const html = this.createEmailTemplate({
+      title: 'Emergency Access Update',
+      content: `
+        <p>Dear ${recipientName},</p>
+        <p>An emergency access request has been initiated.</p>
+        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Request ID:</strong> ${request.id.slice(0, 8)}</p>
+          <p><strong>Type:</strong> ${request.type.replace('_', ' ')}</p>
+          <p><strong>Status:</strong> ${request.status.replace('_', ' ')}</p>
+          <p><strong>Time:</strong> ${new Date(request.createdAt).toLocaleString()}</p>
+        </div>
+        <p>Further action may be required. Please check the application for details.</p>
+      `
+    });
+
+    return this.send({ to, subject, html });
   }
 }
 

@@ -2936,8 +2936,10 @@ export type MessageCategory =
 export interface MessageContent {
     text?: string;              // Rich text content (HTML)
     plainText?: string;         // Plain text version
+    audioId?: string;           // ID of audio in storage service
     audioUrl?: string;          // URL to audio file
     audioTranscript?: string;   // Transcript of audio
+    videoId?: string;           // ID of video in storage service
     videoUrl?: string;          // URL to video file
     videoTranscript?: string;   // Transcript of video
     videoPoster?: string;       // Video thumbnail
@@ -3025,10 +3027,142 @@ export type MessageTone =
 
 export interface MessageCondition {
     id: string;
-    type: ConditionType;
+    type: MessageConditionType;
     operator: 'AND' | 'OR' | 'NOT';
-    parameters: Record<string, any>;
+    parameters: MessageConditionParameters;
+    nestedConditions?: MessageCondition[];
     description?: string;
+}
+
+export type MessageConditionType = 
+    | 'userInactivity'      // User hasn't logged in for X days
+    | 'dateReached'         // Specific date/time reached
+    | 'messageRead'         // Another message was read
+    | 'messageDelivered'    // Another message was delivered
+    | 'beneficiaryAccessed' // Beneficiary accessed the system
+    | 'documentAccessed'    // Specific document was accessed
+    | 'eventTriggered'      // Custom event was triggered
+    | 'deadManSwitch'       // Dead man's switch activated
+    | 'emergencyAccess'     // Emergency access was granted
+    | 'verificationComplete' // Beneficiary verification completed
+    | 'passwordVaultAccessed' // Password vault was accessed
+    | 'customCondition';    // Custom condition
+
+export interface MessageConditionParameters {
+    // For userInactivity
+    inactivityDays?: number;
+    
+    // For dateReached
+    targetDate?: string;
+    timezone?: string;
+    
+    // For messageRead/messageDelivered
+    messageId?: string;
+    messageIds?: string[];
+    
+    // For beneficiaryAccessed
+    beneficiaryId?: string;
+    beneficiaryIds?: string[];
+    
+    // For documentAccessed
+    documentId?: string;
+    documentIds?: string[];
+    
+    // For eventTriggered
+    eventName?: string;
+    eventData?: Record<string, any>;
+    
+    // For deadManSwitch
+    switchId?: string;
+    
+    // For emergencyAccess
+    tokenId?: string;
+    grantId?: string;
+    
+    // For verificationComplete
+    verificationType?: string;
+    verificationLevel?: string;
+    
+    // For passwordVaultAccessed
+    vaultItemId?: string;
+    accessType?: 'view' | 'copy' | 'export';
+    
+    // For customCondition
+    customLogic?: string;
+    customParameters?: Record<string, any>;
+}
+
+export interface ConditionalRule {
+    id: string;
+    name: string;
+    description?: string;
+    enabled: boolean;
+    priority: number; // Lower number = higher priority
+    conditions: MessageCondition[];
+    actions: ConditionalAction[];
+    createdAt: string;
+    updatedAt: string;
+    lastTriggered?: string;
+    triggerCount: number;
+    metadata?: Record<string, any>;
+}
+
+export interface ConditionalAction {
+    id: string;
+    type: ConditionalActionType;
+    parameters: ConditionalActionParameters;
+    delay?: number; // Delay in minutes before executing action
+    retryOnFailure?: boolean;
+    maxRetries?: number;
+}
+
+export type ConditionalActionType = 
+    | 'sendMessage'         // Send a specific message
+    | 'scheduleMessage'     // Schedule a message for future delivery
+    | 'cancelMessage'       // Cancel a scheduled message
+    | 'notifyUser'          // Send notification to user
+    | 'notifyBeneficiary'   // Send notification to beneficiary
+    | 'grantAccess'         // Grant access to specific content
+    | 'revokeAccess'        // Revoke access to specific content
+    | 'triggerEvent'        // Trigger a custom event
+    | 'executeWebhook'      // Call external webhook
+    | 'logEvent';           // Log event for audit
+
+export interface ConditionalActionParameters {
+    // For sendMessage/scheduleMessage
+    messageId?: string;
+    recipientIds?: string[];
+    deliveryMethod?: DeliveryMethod;
+    scheduledTime?: string;
+    
+    // For cancelMessage
+    messageInstanceId?: string;
+    
+    // For notifyUser/notifyBeneficiary
+    notificationTitle?: string;
+    notificationBody?: string;
+    notificationChannels?: ('email' | 'sms' | 'push')[];
+    
+    // For grantAccess/revokeAccess
+    resourceId?: string;
+    resourceType?: string;
+    permissionLevel?: string;
+    expirationTime?: string;
+    
+    // For triggerEvent
+    eventName?: string;
+    eventPayload?: Record<string, any>;
+    
+    // For executeWebhook
+    webhookUrl?: string;
+    webhookMethod?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+    webhookHeaders?: Record<string, string>;
+    webhookBody?: Record<string, any>;
+    
+    // For logEvent
+    logLevel?: 'info' | 'warning' | 'error';
+    logMessage?: string;
+    logData?: Record<string, any>;
 }
 
 export interface MessageScheduling {
@@ -3186,6 +3320,7 @@ export interface MessagesLibrary {
     templates: MessageTemplate[];
     categories: MessageCategory[];
     deliveryLogs: MessageDeliveryLog[];
+    conditionalRules: ConditionalRule[];
     settings: MessageSystemSettings;
     statistics: MessageStatistics;
 }

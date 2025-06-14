@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Extension Icons</title>
+</head>
+<body>
+    <h1>If I'm Gone Extension Icons</h1>
+    <p>This page generates PNG icons for the browser extension.</p>
+    
+    <canvas id="canvas-16" width="16" height="16"></canvas>
+    <canvas id="canvas-32" width="32" height="32"></canvas>
+    <canvas id="canvas-48" width="48" height="48"></canvas>
+    <canvas id="canvas-128" width="128" height="128"></canvas>
+    
+    <script>
+        // Function to draw icon
+        function drawIcon(canvas, size) {
+            const ctx = canvas.getContext('2d');
+            
+            // Background
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Text
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${size * 0.4}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('IG', size / 2, size / 2);
+            
+            // Convert to blob and download
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `icon-${size}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+        
+        // Generate all icons
+        [16, 32, 48, 128].forEach(size => {
+            const canvas = document.getElementById(`canvas-${size}`);
+            drawIcon(canvas, size);
+        });
+        
+        // Also create default site icon
+        const defaultCanvas = document.createElement('canvas');
+        defaultCanvas.width = 32;
+        defaultCanvas.height = 32;
+        const ctx = defaultCanvas.getContext('2d');
+        
+        // Draw default site icon
+        ctx.fillStyle = '#e5e7eb';
+        ctx.fillRect(0, 0, 32, 32);
+        ctx.fillStyle = '#6b7280';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('?', 16, 16);
+        
+        defaultCanvas.toBlob(function(blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'default-site.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    </script>
+    
+    <p>Icons have been generated and downloaded. Please move them to the assets/icons directory.</p>
+</body>
+</html>

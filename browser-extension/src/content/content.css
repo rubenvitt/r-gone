@@ -1,0 +1,141 @@
+/* Content Script Styles for If I'm Gone Browser Extension */
+
+/* Password field indicator */
+.ifimgone-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.ifimgone-indicator img {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* Menu styles */
+.ifimgone-menu {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #374151;
+}
+
+.ifimgone-menu * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Notification styles */
+.ifimgone-notification {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+/* Password selection menu */
+.ifimgone-password-selection {
+  position: absolute;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 10001;
+  min-width: 250px;
+  max-width: 350px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.ifimgone-password-selection-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  color: #374151;
+}
+
+.ifimgone-password-selection-items {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.ifimgone-password-selection-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.ifimgone-password-selection-item:last-child {
+  border-bottom: none;
+}
+
+.ifimgone-password-selection-item:hover {
+  background-color: #f9fafb;
+}
+
+.ifimgone-password-selection-item-icon {
+  width: 32px;
+  height: 32px;
+  margin-right: 12px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ifimgone-password-selection-item-icon img {
+  width: 20px;
+  height: 20px;
+}
+
+.ifimgone-password-selection-item-details {
+  flex: 1;
+  overflow: hidden;
+}
+
+.ifimgone-password-selection-item-title {
+  font-weight: 500;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ifimgone-password-selection-item-username {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Filled field highlight */
+.ifimgone-filled {
+  background-color: #dbeafe !important;
+  transition: background-color 0.3s ease;
+}
+
+/* Scrollbar styles for menus */
+.ifimgone-password-selection-items::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ifimgone-password-selection-items::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+.ifimgone-password-selection-items::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.ifimgone-password-selection-items::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}

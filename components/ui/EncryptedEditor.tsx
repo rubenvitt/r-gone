@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { Lock, Unlock, AlertCircle, CheckCircle, Shield } from 'lucide-react'
+import { Lock, Unlock, AlertCircle, CheckCircle, Shield, HelpCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import RichTextEditor from '@/components/ui/RichTextEditor'
 import MultiNoteEditor from '@/components/ui/MultiNoteEditor'
@@ -14,6 +14,8 @@ import { DecryptedData, EnhancedDecryptedData } from '@/types/data'
 import { migrateToMultiNote, createEnhancedData } from '@/utils/multi-note-utils'
 import { passwordVaultService } from '@/services/password-vault-service'
 import { documentRepositoryService } from '@/services/document-repository-service'
+import ContextualHelp from './ContextualHelp'
+import HelpTooltip from './HelpTooltip'
 
 interface EncryptedEditorProps {
   initialContent?: string

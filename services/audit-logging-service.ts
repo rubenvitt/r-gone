@@ -135,6 +135,26 @@ export class AuditLoggingService {
    * Retrieve audit logs with filtering and pagination
    */
   async getLogs(filter: AuditLogFilter = {}): Promise<AuditLogEntry[]> {
+    // Check if running on server side
+    if (typeof window !== 'undefined') {
+      // Client side - fetch from API
+      try {
+        const response = await fetch('/api/audit/logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(filter)
+        })
+        if (response.ok) {
+          const data = await response.json()
+          return data.success ? data.logs : []
+        }
+      } catch (error) {
+        console.error('Failed to fetch audit logs from API:', error)
+      }
+      return []
+    }
+
+    // Server side - access filesystem
     try {
       const fs = await import('fs/promises')
       const path = await import('path')

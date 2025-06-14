@@ -13,10 +13,13 @@ import {
   Key,
   Eye,
   Download,
-  Lock
+  Lock,
+  HelpCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { EmergencyContact, ContactGroup } from '@/services/emergency-access-service'
+import ContextualHelp from './ContextualHelp'
+import HelpTooltip from './HelpTooltip'
 
 interface EmergencyContactsProps {
   className?: string
@@ -190,22 +193,40 @@ export default function EmergencyContacts({
           <div className="flex items-center space-x-3">
             <Users className="h-8 w-8 text-blue-600" />
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Emergency Contacts</h2>
+              <HelpTooltip
+                tooltipId="emergency-contacts-title"
+                config={{
+                  content: "Emergency contacts can request access to your information if something happens to you. You control what they can see and when.",
+                  placement: "right"
+                }}
+              >
+                <h2 className="text-2xl font-bold text-gray-900">Emergency Contacts</h2>
+              </HelpTooltip>
               <p className="text-gray-600">Manage trusted contacts who can access your information</p>
             </div>
           </div>
-          <Button
-            onClick={() => {
-              setShowAddContact(true)
-              setEditingContact(null)
-              resetForm()
-            }}
-            disabled={isLoading}
-            className="flex items-center space-x-2"
-          >
-            <UserPlus className="h-4 w-4" />
-            <span>Add Contact</span>
-          </Button>
+          <div className="flex items-center space-x-2">
+            <ContextualHelp
+              context={{
+                page: 'contacts',
+                feature: 'emergency-access'
+              }}
+              buttonVariant="outline"
+            />
+            <Button
+              onClick={() => {
+                setShowAddContact(true)
+                setEditingContact(null)
+                resetForm()
+              }}
+              disabled={isLoading}
+              className="flex items-center space-x-2"
+              data-help="add-contact-button"
+            >
+              <UserPlus className="h-4 w-4" />
+              <span>Add Contact</span>
+            </Button>
+          </div>
         </div>
       </div>
 

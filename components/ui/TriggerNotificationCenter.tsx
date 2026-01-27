@@ -1,11 +1,9 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,9 +13,9 @@ import { Switch } from '@/components/ui/switch'
 import { 
   Bell, BellOff, Mail, MessageSquare, Phone, 
   Webhook, AlertTriangle, CheckCircle, Clock,
-  Send, Filter, RefreshCw, Trash2, Eye,
-  AlertCircle, User, Users, Settings, TestTube,
-  Activity, FileText, Smartphone, Shield, Zap
+  Send, RefreshCw, Trash2, Eye,
+  AlertCircle, User, Users, TestTube,
+  Activity, FileText, Smartphone
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -94,7 +92,6 @@ export function TriggerNotificationCenter() {
     total: 0, sent: 0, delivered: 0, read: 0, failed: 0, pending: 0
   })
   const [filter, setFilter] = useState<NotificationFilter>({})
-  const [selectedTab, setSelectedTab] = useState('inbox')
   const [selectedNotification, setSelectedNotification] = useState<TriggerNotification | null>(null)
   const [showTestDialog, setShowTestDialog] = useState(false)
   const [testForm, setTestForm] = useState({
@@ -105,11 +102,7 @@ export function TriggerNotificationCenter() {
     message: 'This is a test notification'
   })
 
-  useEffect(() => {
-    loadNotifications()
-  }, [filter])
-
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -131,7 +124,11 @@ export function TriggerNotificationCenter() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filter])
+
+  useEffect(() => {
+    loadNotifications()
+  }, [loadNotifications])
 
   const markAsRead = async (notificationId: string) => {
     try {
@@ -225,7 +222,7 @@ export function TriggerNotificationCenter() {
   const getPriorityBadge = (priority: string) => {
     const p = notificationPriorities.find(pr => pr.value === priority)
     return (
-      <Badge variant={p?.color as any || 'outline'}>
+      <Badge variant={(p?.color || 'outline') as "default" | "secondary" | "destructive" | "outline"}>
         {p?.label || priority}
       </Badge>
     )

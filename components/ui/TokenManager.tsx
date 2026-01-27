@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { 
   Key, 
   Clock, 
-  Users, 
   Eye, 
   Trash2, 
   AlertTriangle, 
@@ -45,6 +44,29 @@ interface TokenManagerProps {
   className?: string;
 }
 
+// Helper function moved outside component
+const generateTokenUrl = async (token: TokenData): Promise<string> => {
+  try {
+    // Get the JWT token for this token ID
+    const response = await fetch(`/api/emergency/tokens/${token.id}/jwt`)
+    const result = await response.json()
+
+    if (result.success && result.jwtToken) {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
+      return `${baseUrl}/emergency-access/${result.jwtToken}`
+    } else {
+      // Fallback to token ID if JWT generation fails
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
+      return `${baseUrl}/emergency-access/${token.id}`
+    }
+  } catch (error) {
+    console.error('Failed to generate JWT URL:', error)
+    // Fallback to token ID
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
+    return `${baseUrl}/emergency-access/${token.id}`
+  }
+}
+
 export default function TokenManager({ className = '' }: TokenManagerProps) {
   const [tokens, setTokens] = useState<TokenData[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -55,11 +77,7 @@ export default function TokenManager({ className = '' }: TokenManagerProps) {
   
   const { refreshToken, activateToken } = useEmergencyAccess()
 
-  useEffect(() => {
-    loadTokens()
-  }, [showExpired])
-
-  const loadTokens = async () => {
+  const loadTokens = useCallback(async () => {
     setIsLoading(true)
     setError(null)
 
@@ -87,12 +105,16 @@ export default function TokenManager({ className = '' }: TokenManagerProps) {
       } else {
         setError(result.error || 'Failed to load tokens')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to load emergency access tokens')
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [showExpired])
+
+  useEffect(() => {
+    loadTokens()
+  }, [loadTokens])
 
   const handleRevokeToken = async (tokenId: string, reason?: string) => {
     if (!confirm('Are you sure you want to revoke this access token? This cannot be undone.')) {
@@ -118,7 +140,7 @@ export default function TokenManager({ className = '' }: TokenManagerProps) {
       } else {
         setError(result.error || 'Failed to revoke token')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to revoke token')
     } finally {
       setIsLoading(false)
@@ -146,7 +168,7 @@ export default function TokenManager({ className = '' }: TokenManagerProps) {
       } else {
         setError(result.error || 'Cleanup failed')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to cleanup expired tokens')
     } finally {
       setIsLoading(false)
@@ -194,7 +216,7 @@ export default function TokenManager({ className = '' }: TokenManagerProps) {
         alert('Token refreshed successfully!')
         await loadTokens()
       }
-    } catch (error) {
+    } catch {
       setError('Failed to refresh token')
     } finally {
       setIsLoading(false)
@@ -215,32 +237,10 @@ export default function TokenManager({ className = '' }: TokenManagerProps) {
         alert('Token activated successfully!')
         await loadTokens()
       }
-    } catch (error) {
+    } catch {
       setError('Failed to activate token')
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const generateTokenUrl = async (token: TokenData): Promise<string> => {
-    try {
-      // Get the JWT token for this token ID
-      const response = await fetch(`/api/emergency/tokens/${token.id}/jwt`)
-      const result = await response.json()
-      
-      if (result.success && result.jwtToken) {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
-        return `${baseUrl}/emergency-access/${result.jwtToken}`
-      } else {
-        // Fallback to token ID if JWT generation fails
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
-        return `${baseUrl}/emergency-access/${token.id}`
-      }
-    } catch (error) {
-      console.error('Failed to generate JWT URL:', error)
-      // Fallback to token ID
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || window.location.origin
-      return `${baseUrl}/emergency-access/${token.id}`
     }
   }
 

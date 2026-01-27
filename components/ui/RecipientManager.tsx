@@ -4,45 +4,47 @@ import { useState, useCallback, useMemo } from 'react'
 import {
   Plus,
   Search,
-  Filter,
   Users,
   User,
   Mail,
   Phone,
-  Shield,
   Edit,
   Trash2,
   Save,
   X,
-  Check,
   AlertCircle,
   CheckCircle,
   Globe,
-  MessageSquare,
   FileText,
-  UserPlus,
   Import,
-  Export,
-  Copy
+  LucideIcon
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   MessageRecipient,
   RecipientType,
-  DeliveryMethod,
-  MessagePermissions
+  DeliveryMethod
 } from '@/types/data'
+
+interface ImportSourceItem {
+  id?: string
+  email?: string
+  name?: string
+  firstName?: string
+  lastName?: string
+  relationship?: string
+  type?: string
+  [key: string]: unknown
+}
 
 interface RecipientManagerProps {
   recipients: MessageRecipient[]
-  beneficiaries?: any[]
-  contacts?: any[]
+  beneficiaries?: ImportSourceItem[]
+  contacts?: ImportSourceItem[]
   onRecipientsChange: (recipients: MessageRecipient[]) => void
   mode?: 'inline' | 'modal'
   onClose?: () => void
 }
-
-type ViewMode = 'grid' | 'list'
 
 export default function RecipientManager({
   recipients,
@@ -54,7 +56,6 @@ export default function RecipientManager({
 }: RecipientManagerProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState<RecipientType | 'all'>('all')
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [editingRecipient, setEditingRecipient] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   
@@ -159,8 +160,8 @@ export default function RecipientManager({
         id: crypto.randomUUID(),
         type: source === 'beneficiaries' ? 'beneficiary' : 'contact' as RecipientType,
         name: item.name || `${item.firstName} ${item.lastName}`,
-        identifier: item.email || item.id,
-        relationship: item.relationship || item.type,
+        identifier: (item.email || item.id) as string,
+        relationship: (item.relationship || item.type) as string,
         priority: recipients.length + index + 1,
         deliveryMethod: ['email'] as DeliveryMethod[],
         permissions: {
@@ -419,7 +420,7 @@ export default function RecipientManager({
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredRecipients.map((recipient, index) => (
+          {filteredRecipients.map((recipient) => (
             <RecipientCard
               key={recipient.id}
               recipient={recipient}
@@ -475,7 +476,7 @@ interface RecipientCardProps {
   onSave: (updates: Partial<MessageRecipient>) => void
   onCancel: () => void
   onDelete: () => void
-  getDeliveryMethodIcon: (method: DeliveryMethod) => any
+  getDeliveryMethodIcon: (method: DeliveryMethod) => LucideIcon
 }
 
 function RecipientCard({

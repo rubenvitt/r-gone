@@ -1,38 +1,39 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Slider } from '@/components/ui/slider'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { 
   AlertTriangle, Shield, Phone, MessageSquare, 
-  CheckCircle, X, Loader2, AlertCircle,
+  CheckCircle, Loader2, AlertCircle,
   Zap, Eye, Lock, Users
 } from 'lucide-react'
-// import { manualActivationService, ActivationLevel, UrgencyLevel } from '@/services/manual-activation-service'
-
-// Define types locally to avoid client-side import issues
-type ActivationLevel = 'minimal' | 'partial' | 'full'
-type UrgencyLevel = 'low' | 'medium' | 'high' | 'critical'
 import { useAuth } from '@/hooks/useAuth'
+
+// Define types and constants
+const ActivationLevel = {
+  FULL: 'full',
+  PARTIAL: 'partial',
+  VIEW_ONLY: 'minimal'
+} as const
+
+type ActivationLevelType = typeof ActivationLevel[keyof typeof ActivationLevel]
 
 interface PanicButtonProps {
   size?: 'small' | 'medium' | 'large'
   variant?: 'default' | 'floating' | 'minimal'
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'center'
-  alwaysVisible?: boolean
+  // alwaysVisible?: boolean // Unused
 }
 
 export function PanicButton({
   size = 'medium',
   variant = 'default',
-  position = 'bottom-right',
-  alwaysVisible = false
+  position = 'bottom-right'
 }: PanicButtonProps) {
   const { user } = useAuth()
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
@@ -40,7 +41,7 @@ export function PanicButton({
   const [loading, setLoading] = useState(false)
   const [holdProgress, setHoldProgress] = useState(0)
   const [isHolding, setIsHolding] = useState(false)
-  const [activationLevel, setActivationLevel] = useState<ActivationLevel>(ActivationLevel.FULL)
+  const [activationLevel, setActivationLevel] = useState<ActivationLevelType>(ActivationLevel.FULL)
   const [reason, setReason] = useState('')
   const [customReason, setCustomReason] = useState('')
   const [activationId, setActivationId] = useState<string>('')
@@ -53,6 +54,37 @@ export function PanicButton({
     'Family emergency',
     'Other urgent matter'
   ]
+
+  const triggerPanic = useCallback(async () => {
+    setLoading(true)
+
+    try {
+      const finalReason = reason === 'Other urgent matter' ? customReason : reason
+
+      // API call to trigger panic button
+      const response = await fetch('/api/activation/panic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user?.id || 'default-user',
+          activationLevel,
+          reason: finalReason || 'Emergency activation'
+        })
+      })
+
+      if (!response.ok) throw new Error('Failed to trigger panic button')
+      const request = await response.json()
+
+      setActivationId(request.id)
+      setShowConfirmDialog(false)
+      setShowSuccessDialog(true)
+    } catch (error) {
+      console.error('Failed to trigger panic button:', error)
+      // Show error alert
+    } finally {
+      setLoading(false)
+    }
+  }, [reason, customReason, user?.id, activationLevel])
 
   // Hold-to-activate timer
   useEffect(() => {
@@ -75,7 +107,7 @@ export function PanicButton({
     }
 
     return () => clearInterval(interval)
-  }, [isHolding])
+  }, [isHolding, triggerPanic])
 
   const handleMouseDown = () => {
     if (variant === 'minimal') {
@@ -89,37 +121,6 @@ export function PanicButton({
     if (isHolding && holdProgress < 100) {
       setIsHolding(false)
       setHoldProgress(0)
-    }
-  }
-
-  const triggerPanic = async () => {
-    setLoading(true)
-    
-    try {
-      const finalReason = reason === 'Other urgent matter' ? customReason : reason
-      
-      // API call to trigger panic button
-      const response = await fetch('/api/activation/panic', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id || 'default-user',
-          activationLevel,
-          reason: finalReason || 'Emergency activation'
-        })
-      })
-      
-      if (!response.ok) throw new Error('Failed to trigger panic button')
-      const request = await response.json()
-
-      setActivationId(request.id)
-      setShowConfirmDialog(false)
-      setShowSuccessDialog(true)
-    } catch (error) {
-      console.error('Failed to trigger panic button:', error)
-      // Show error alert
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -252,7 +253,7 @@ export function PanicButton({
               <Label>Activation Level</Label>
               <RadioGroup
                 value={activationLevel}
-                onValueChange={(value) => setActivationLevel(value as ActivationLevel)}
+                onValueChange={(value) => setActivationLevel(value as ActivationLevelType)}
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value={ActivationLevel.FULL} id="full" />

@@ -106,6 +106,14 @@ export class AuthService {
   }
 
   /**
+   * Generate a user ID from a passphrase
+   * Uses SHA-256 hash to create a deterministic but secure user ID
+   */
+  generateUserIdFromPassphrase(passphrase: string): string {
+    return crypto.createHash('sha256').update(passphrase).digest('hex').substring(0, 16)
+  }
+
+  /**
    * Create or update passphrase configuration
    */
   async setPassphrase(
@@ -212,20 +220,36 @@ export class AuthService {
 
   /**
    * Authenticate with passphrase
+   * If userId is not provided, it will be generated from the passphrase
    */
   async authenticate(
     passphrase: string, 
-    userId: string = 'default',
+    userId?: string,
     clientInfo?: { ipAddress?: string; userAgent?: string }
   ): Promise<AuthResult> {
     try {
       await this.ensureDirectories()
 
-      const config = await this.getPassphraseConfig(userId)
+      // Generate userId from passphrase if not provided
+      const actualUserId = userId || this.generateUserIdFromPassphrase(passphrase)
+
+      let config = await this.getPassphraseConfig(actualUserId)
+      
+      // If no config exists for this user, create a new account automatically
       if (!config) {
-        return { 
-          success: false, 
-          error: 'No passphrase configured. Please set up a passphrase first.' 
+        const result = await this.setPassphrase(passphrase, actualUserId)
+        if (!result.success) {
+          return { 
+            success: false, 
+            error: result.error || 'Failed to create account' 
+          }
+        }
+        config = await this.getPassphraseConfig(actualUserId)
+        if (!config) {
+          return { 
+            success: false, 
+            error: 'Failed to initialize account configuration' 
+          }
         }
       }
 
@@ -265,7 +289,7 @@ export class AuthService {
       const now = new Date()
       const session: SessionData = {
         id: sessionId,
-        userId,
+        userId: actualUserId,
         createdAt: now.toISOString(),
         lastActivity: now.toISOString(),
         expiresAt: new Date(now.getTime() + AuthService.SESSION_DURATION).toISOString(),

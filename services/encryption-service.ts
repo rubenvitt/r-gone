@@ -2,6 +2,7 @@
 
 import { encryptData, decryptData } from '@/lib/pgp'
 import { Section, DecryptedData } from '@/types/data'
+import { v4 as uuidv4 } from 'uuid'
 
 export interface EncryptionResult {
   success: boolean
@@ -48,7 +49,7 @@ export class EncryptionService {
       const dataToEncrypt: DecryptedData = {
         sections: [
           {
-            id: crypto.randomUUID(),
+            id: uuidv4(),
             title,
             content: [content] // Rich text content as single item
           }

@@ -1,5 +1,6 @@
 'use client'
 
+import { v4 as uuidv4 } from 'uuid'
 import { 
   DigitalAsset, 
   DigitalAssetInventory, 
@@ -290,7 +291,7 @@ export class DigitalAssetInventoryService {
     }
 
     const asset: DigitalAsset = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       type: options.type,
       category: options.category,
       name: options.name.trim(),
@@ -692,7 +693,7 @@ export class DigitalAssetInventoryService {
       const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
       
       const alert: AssetAlert = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         assetId: asset.id,
         type: 'expiry',
         severity: daysUntilExpiry <= 7 ? 'critical' : 'warning',
@@ -723,7 +724,7 @@ export class DigitalAssetInventoryService {
     
     if (Math.abs(changePercent) >= 10) { // Alert on 10% or more change
       const alert: AssetAlert = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         assetId: newAsset.id,
         type: 'value_change',
         severity: Math.abs(changePercent) >= 25 ? 'warning' : 'info',
@@ -924,7 +925,7 @@ export class DigitalAssetInventoryService {
         
         // Create the asset
         const asset: DigitalAsset = {
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           type: assetData.type,
           category: assetData.category,
           name: assetData.name,
@@ -982,7 +983,7 @@ export class DigitalAssetInventoryService {
           // Create asset with new ID
           const asset: DigitalAsset = {
             ...assetData,
-            id: crypto.randomUUID(),
+            id: uuidv4(),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             // Ensure assetData is properly typed

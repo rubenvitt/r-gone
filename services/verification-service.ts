@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid'
 import { 
   BeneficiaryVerificationSystem,
   VerificationRecord,
@@ -141,7 +142,7 @@ export class VerificationService {
     const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
 
     const session: VerificationSession = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       beneficiaryId,
       workflowId,
       status: 'in_progress',
@@ -221,7 +222,7 @@ export class VerificationService {
     }
 
     const verificationRecord: VerificationRecord = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       beneficiaryId: session.beneficiaryId,
       sessionId: session.id,
       type: 'identity',
@@ -243,7 +244,7 @@ export class VerificationService {
 
     // Process document
     const document: VerificationDocument = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       type: this.mapMethodToDocumentType(method),
       filename: `${method}_${Date.now()}.jpg`,
       uploadedAt: new Date().toISOString(),
@@ -355,7 +356,7 @@ export class VerificationService {
     }
 
     const verificationRecord: VerificationRecord = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       beneficiaryId: session.beneficiaryId,
       sessionId: session.id,
       type: 'document',
@@ -377,7 +378,7 @@ export class VerificationService {
     // Process each document
     for (const doc of documents) {
       const verificationDocument: VerificationDocument = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         type: doc.type as any,
         filename: doc.filename,
         uploadedAt: new Date().toISOString(),
@@ -432,7 +433,7 @@ export class VerificationService {
     }
 
     const verificationRecord: VerificationRecord = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       beneficiaryId: session.beneficiaryId,
       sessionId: session.id,
       type: 'geographic',
@@ -723,7 +724,7 @@ export class VerificationService {
       },
       timestamp: new Date().toISOString(),
       provider: provider.id,
-      externalId: `mock_${crypto.randomUUID()}`
+      externalId: `mock_${uuidv4()}`
     };
   }
 

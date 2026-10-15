@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { v4 as uuidv4 } from 'uuid'
 import {
   Plus,
   Minus,
@@ -99,7 +100,7 @@ export default function ConditionalRuleBuilder({
   // Add new condition
   const addCondition = useCallback(() => {
     const newCondition: MessageCondition = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       type: 'userInactivity',
       operator: 'AND',
       parameters: { inactivityDays: 30 }
@@ -128,7 +129,7 @@ export default function ConditionalRuleBuilder({
   // Add new action
   const addAction = useCallback(() => {
     const newAction: ConditionalAction = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       type: 'sendMessage',
       parameters: {}
     }

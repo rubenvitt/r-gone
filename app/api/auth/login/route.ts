@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get('user-agent') || 'unknown'
     }
 
-    const result = await authService.authenticate(passphrase, 'default', clientInfo)
+    // Don't pass userId - let the auth service generate it from passphrase
+    const result = await authService.authenticate(passphrase, undefined, clientInfo)
 
     if (!result.success) {
       const status = result.lockedUntil ? 429 : 401

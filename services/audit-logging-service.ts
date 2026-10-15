@@ -8,6 +8,7 @@ import {
   AuditConfiguration 
 } from '@/types/data'
 import { NextRequest } from 'next/server'
+import { v4 as uuidv4 } from 'uuid'
 import crypto from 'crypto'
 
 export interface AuditEventContext {
@@ -327,7 +328,7 @@ export class AuditLoggingService {
   // Private methods
 
   private async createAuditEntry(context: AuditEventContext, request?: NextRequest): Promise<AuditLogEntry> {
-    const id = crypto.randomUUID()
+    const id = uuidv4()
     const timestamp = new Date().toISOString()
     
     // Extract request information

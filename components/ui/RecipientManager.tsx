@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
+import { v4 as uuidv4 } from 'uuid'
 import {
   Plus,
   Search,
@@ -101,7 +102,7 @@ export default function RecipientManager({
     }
 
     const recipient: MessageRecipient = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       type: newRecipient.type!,
       name: newRecipient.name,
       identifier: newRecipient.identifier,
@@ -156,7 +157,7 @@ export default function RecipientManager({
     const newRecipients = sourceList
       .filter(item => !existingIds.has(item.email || item.id))
       .map((item, index) => ({
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         type: source === 'beneficiaries' ? 'beneficiary' : 'contact' as RecipientType,
         name: item.name || `${item.firstName} ${item.lastName}`,
         identifier: item.email || item.id,

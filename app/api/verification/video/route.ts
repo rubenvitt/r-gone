@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid'
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
         }
 
         const videoCall = {
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           sessionId,
           verifierId,
           scheduledTime,
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
 function generateMeetingUrl(): string {
   // In a real implementation, this would integrate with video conferencing services
   // like Zoom, WebRTC, Twilio Video, etc.
-  const meetingId = crypto.randomUUID();
+  const meetingId = uuidv4();
   return `https://verification-video.example.com/room/${meetingId}`;
 }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fileService, FileServiceError } from '@/services/file-service'
 import { validateEmergencyToken, hasEmergencyPermission, logEmergencyAccess } from '@/lib/emergency-auth'
+import { requireAuth } from '@/lib/auth-middleware'
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,14 +48,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // If not emergency access, check for regular authentication here
-    // For now, we'll allow access if no emergency token (backward compatibility)
+    // If not emergency access, check for regular authentication
+    let userId: string;
     if (!isEmergencyAccess) {
-      // TODO: Add regular user authentication check here
-      // For now, allow access for backward compatibility
+      const authResult = await requireAuth(request);
+      if (!authResult.success) {
+        return authResult.error;
+      }
+      userId = authResult.auth.userId;
+    } else {
+      // For emergency access, use the userId from the emergency token payload
+      userId = emergencyPayload.userId;
     }
 
-    const files = await fileService.listFiles({
+    const files = await fileService.listFiles(userId, {
       sortBy,
       sortOrder,
       search,
@@ -96,6 +103,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (!authResult.success) {
+      return authResult.error;
+    }
+    const { userId } = authResult.auth;
+
     const body = await request.json()
     const { encryptedContent, filename, description, tags, fileId } = body
 
@@ -106,7 +119,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await fileService.saveEncryptedData(encryptedContent, {
+    const result = await fileService.saveEncryptedData(encryptedContent, userId, {
       fileId,
       filename,
       description,

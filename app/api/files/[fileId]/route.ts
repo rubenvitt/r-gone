@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { fileService, FileServiceError } from '@/services/file-service'
 import { validateEmergencyToken, hasEmergencyPermission, logEmergencyAccess } from '@/lib/emergency-auth'
 import { decryptData } from '@/lib/pgp'
+import { requireAuth } from '@/lib/auth-middleware'
 
 interface RouteParams {
   params: {
@@ -54,14 +55,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // If not emergency access, check for regular authentication here
-    // For now, we'll allow access if no emergency token (backward compatibility)
+    // If not emergency access, check for regular authentication
+    let userId: string;
     if (!isEmergencyAccess) {
-      // TODO: Add regular user authentication check here
-      // For now, allow access for backward compatibility
+      const authResult = await requireAuth(request);
+      if (!authResult.success) {
+        return authResult.error;
+      }
+      userId = authResult.auth.userId;
+    } else {
+      // For emergency access, use the userId from the emergency token payload
+      userId = emergencyPayload.userId;
     }
 
-    const fileData = await fileService.getEncryptedData(fileId)
+    const fileData = await fileService.getEncryptedData(fileId, userId)
     
     if (!fileData) {
       if (isEmergencyAccess && emergencyPayload) {
@@ -74,7 +81,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Also get metadata
-    const metadata = await fileService.getFileMetadata(fileId)
+    const metadata = await fileService.getFileMetadata(fileId, userId)
 
     // Log successful emergency access
     if (isEmergencyAccess && emergencyPayload) {
@@ -166,6 +173,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const authResult = await requireAuth(request);
+    if (!authResult.success) {
+      return authResult.error;
+    }
+    const { userId } = authResult.auth;
+
     const { fileId } = params
     const body = await request.json()
     const { encryptedContent, filename, description, tags } = body
@@ -178,7 +191,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if file exists
-    const existingFile = await fileService.getEncryptedData(fileId)
+    const existingFile = await fileService.getEncryptedData(fileId, userId)
     if (!existingFile) {
       return NextResponse.json(
         { success: false, error: 'File not found' },
@@ -186,7 +199,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    const result = await fileService.saveEncryptedData(encryptedContent, {
+    const result = await fileService.saveEncryptedData(encryptedContent, userId, {
       fileId,
       filename,
       description,
@@ -224,9 +237,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const authResult = await requireAuth(request);
+    if (!authResult.success) {
+      return authResult.error;
+    }
+    const { userId } = authResult.auth;
+
     const { fileId } = params
 
-    const deleted = await fileService.deleteFile(fileId)
+    const deleted = await fileService.deleteFile(fileId, userId)
     
     if (!deleted) {
       return NextResponse.json(

@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import { v4 as uuidv4 } from 'uuid'
 import path from 'path';
 import crypto from 'crypto';
 import { EncryptedDataFile } from '@/types/data';
@@ -56,24 +57,49 @@ export class FileService {
         this.backupDir = path.join(process.cwd(), 'data', 'backups');
     }
 
-    private async ensureDirectories(): Promise<void> {
-        await Promise.all([
+    /**
+     * Get user-specific directory paths
+     */
+    private getUserDataDir(userId: string): string {
+        return path.join(this.dataDir, 'users', userId);
+    }
+
+    private getUserMetadataDir(userId: string): string {
+        return path.join(this.metadataDir, 'users', userId);
+    }
+
+    private getUserBackupDir(userId: string): string {
+        return path.join(this.backupDir, 'users', userId);
+    }
+
+    private async ensureDirectories(userId?: string): Promise<void> {
+        const dirs = [
             fs.mkdir(this.dataDir, { recursive: true }),
             fs.mkdir(this.metadataDir, { recursive: true }),
             fs.mkdir(this.backupDir, { recursive: true })
-        ]);
+        ];
+
+        if (userId) {
+            dirs.push(
+                fs.mkdir(this.getUserDataDir(userId), { recursive: true }),
+                fs.mkdir(this.getUserMetadataDir(userId), { recursive: true }),
+                fs.mkdir(this.getUserBackupDir(userId), { recursive: true })
+            );
+        }
+
+        await Promise.all(dirs);
     }
 
-    private getFilePath(fileId: string): string {
-        return path.join(this.dataDir, `${fileId}.encrypted`);
+    private getFilePath(fileId: string, userId: string): string {
+        return path.join(this.getUserDataDir(userId), `${fileId}.encrypted`);
     }
 
-    private getMetadataPath(fileId: string): string {
-        return path.join(this.metadataDir, `${fileId}.meta.json`);
+    private getMetadataPath(fileId: string, userId: string): string {
+        return path.join(this.getUserMetadataDir(userId), `${fileId}.meta.json`);
     }
 
-    private getBackupPath(fileId: string, version: number): string {
-        return path.join(this.backupDir, `${fileId}_v${version}.encrypted`);
+    private getBackupPath(fileId: string, version: number, userId: string): string {
+        return path.join(this.getUserBackupDir(userId), `${fileId}_v${version}.encrypted`);
     }
 
     private generateChecksum(data: string): string {
@@ -81,7 +107,7 @@ export class FileService {
     }
 
     private generateFileId(): string {
-        return crypto.randomUUID();
+        return uuidv4();
     }
 
     /**
@@ -89,6 +115,7 @@ export class FileService {
      */
     async saveEncryptedData(
         encryptedContent: string,
+        userId: string,
         options: {
             fileId?: string;
             filename?: string;
@@ -97,7 +124,7 @@ export class FileService {
         } = {}
     ): Promise<SaveResult> {
         try {
-            await this.ensureDirectories();
+            await this.ensureDirectories(userId);
 
             const fileId = options.fileId || this.generateFileId();
             const filename = options.filename || `emergency-info-${new Date().toISOString().split('T')[0]}`;
@@ -109,11 +136,11 @@ export class FileService {
             let existingMetadata: FileMetadata | null = null;
             
             try {
-                existingMetadata = await this.getFileMetadata(fileId);
+                existingMetadata = await this.getFileMetadata(fileId, userId);
                 version = existingMetadata.version + 1;
                 
                 // Create backup of previous version
-                await this.createBackup(fileId, existingMetadata.version);
+                await this.createBackup(fileId, existingMetadata.version, userId);
             } catch (error) {
                 // File doesn't exist, this is a new file
             }
@@ -140,8 +167,8 @@ export class FileService {
             };
 
             // Save file and metadata atomically
-            const filePath = this.getFilePath(fileId);
-            const metadataPath = this.getMetadataPath(fileId);
+            const filePath = this.getFilePath(fileId, userId);
+            const metadataPath = this.getMetadataPath(fileId, userId);
 
             await Promise.all([
                 fs.writeFile(filePath, JSON.stringify(fileData), 'utf-8'),
@@ -165,15 +192,15 @@ export class FileService {
     /**
      * Get encrypted data by file ID
      */
-    async getEncryptedData(fileId: string): Promise<EncryptedDataFile | null> {
+    async getEncryptedData(fileId: string, userId: string): Promise<EncryptedDataFile | null> {
         try {
-            const filePath = this.getFilePath(fileId);
+            const filePath = this.getFilePath(fileId, userId);
             const data = await fs.readFile(filePath, 'utf-8');
             const parsedData = JSON.parse(data) as EncryptedDataFile;
             
             // Verify checksum if metadata exists
             try {
-                const metadata = await this.getFileMetadata(fileId);
+                const metadata = await this.getFileMetadata(fileId, userId);
                 const currentChecksum = this.generateChecksum(parsedData.encryptedContent);
                 
                 if (currentChecksum !== metadata.checksum) {
@@ -200,9 +227,9 @@ export class FileService {
     /**
      * Get file metadata
      */
-    async getFileMetadata(fileId: string): Promise<FileMetadata> {
+    async getFileMetadata(fileId: string, userId: string): Promise<FileMetadata> {
         try {
-            const metadataPath = this.getMetadataPath(fileId);
+            const metadataPath = this.getMetadataPath(fileId, userId);
             const data = await fs.readFile(metadataPath, 'utf-8');
             return JSON.parse(data) as FileMetadata;
         } catch (error) {
@@ -218,23 +245,24 @@ export class FileService {
     }
 
     /**
-     * List all available files
+     * List all available files for a user
      */
-    async listFiles(options: {
+    async listFiles(userId: string, options: {
         sortBy?: 'createdAt' | 'updatedAt' | 'filename' | 'size';
         sortOrder?: 'asc' | 'desc';
         tags?: string[];
         search?: string;
     } = {}): Promise<FileListItem[]> {
         try {
-            await this.ensureDirectories();
+            await this.ensureDirectories(userId);
             
-            const metadataFiles = await fs.readdir(this.metadataDir);
+            const userMetadataDir = this.getUserMetadataDir(userId);
+            const metadataFiles = await fs.readdir(userMetadataDir).catch(() => []);
             const metadataPromises = metadataFiles
                 .filter(file => file.endsWith('.meta.json'))
                 .map(async file => {
                     try {
-                        const filePath = path.join(this.metadataDir, file);
+                        const filePath = path.join(userMetadataDir, file);
                         const data = await fs.readFile(filePath, 'utf-8');
                         return JSON.parse(data) as FileMetadata;
                     } catch (error) {
@@ -304,10 +332,10 @@ export class FileService {
     /**
      * Delete a file and its metadata
      */
-    async deleteFile(fileId: string): Promise<boolean> {
+    async deleteFile(fileId: string, userId: string): Promise<boolean> {
         try {
-            const filePath = this.getFilePath(fileId);
-            const metadataPath = this.getMetadataPath(fileId);
+            const filePath = this.getFilePath(fileId, userId);
+            const metadataPath = this.getMetadataPath(fileId, userId);
 
             // Check if file exists
             try {
@@ -322,8 +350,8 @@ export class FileService {
 
             // Create final backup before deletion
             try {
-                const metadata = await this.getFileMetadata(fileId);
-                await this.createBackup(fileId, metadata.version, true);
+                const metadata = await this.getFileMetadata(fileId, userId);
+                await this.createBackup(fileId, metadata.version, userId, true);
             } catch (error) {
                 console.warn('Failed to create backup before deletion:', error);
             }
@@ -351,10 +379,10 @@ export class FileService {
     /**
      * Create backup of file
      */
-    private async createBackup(fileId: string, version: number, isDeleted = false): Promise<void> {
+    async createBackup(fileId: string, version: number, userId: string, isDeleted = false): Promise<void> {
         try {
-            const filePath = this.getFilePath(fileId);
-            const backupPath = this.getBackupPath(fileId, version);
+            const filePath = this.getFilePath(fileId, userId);
+            const backupPath = this.getBackupPath(fileId, version, userId);
             
             // Create backup with timestamp suffix if it's a deletion backup
             const finalBackupPath = isDeleted 
@@ -369,9 +397,57 @@ export class FileService {
     }
 
     /**
+     * Restore backup of file
+     */
+    async restoreBackup(fileId: string, version: number, userId: string): Promise<boolean> {
+        try {
+            const backupPath = this.getBackupPath(fileId, version, userId);
+            const filePath = this.getFilePath(fileId, userId);
+            
+            // Check if backup exists
+            try {
+                await fs.access(backupPath);
+            } catch (error) {
+                throw new FileServiceError(
+                    'Backup not found',
+                    'BACKUP_NOT_FOUND',
+                    404
+                );
+            }
+
+            // Restore the backup
+            await fs.copyFile(backupPath, filePath);
+            
+            // Update metadata to reflect the restored version
+            try {
+                const metadata = await this.getFileMetadata(fileId, userId);
+                metadata.version = version;
+                metadata.updatedAt = new Date().toISOString();
+                
+                const metadataPath = this.getMetadataPath(fileId, userId);
+                await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+            } catch (error) {
+                console.warn('Failed to update metadata after restore:', error);
+            }
+            
+            return true;
+        } catch (error) {
+            if (error instanceof FileServiceError) {
+                throw error;
+            }
+            console.error('Restore operation failed:', error);
+            throw new FileServiceError(
+                'Restore operation failed',
+                'RESTORE_FAILED',
+                500
+            );
+        }
+    }
+
+    /**
      * Verify file integrity
      */
-    async verifyFileIntegrity(fileId: string): Promise<{
+    async verifyFileIntegrity(fileId: string, userId: string): Promise<{
         isValid: boolean;
         expectedChecksum?: string;
         actualChecksum?: string;
@@ -379,8 +455,8 @@ export class FileService {
     }> {
         try {
             const [fileData, metadata] = await Promise.all([
-                this.getEncryptedData(fileId),
-                this.getFileMetadata(fileId)
+                this.getEncryptedData(fileId, userId),
+                this.getFileMetadata(fileId, userId)
             ]);
 
             if (!fileData) {
@@ -404,9 +480,45 @@ export class FileService {
     }
 
     /**
-     * Get storage statistics
+     * Update file metadata
      */
-    async getStorageStats(): Promise<{
+    async updateMetadata(fileId: string, userId: string, updates: {
+        filename?: string;
+        description?: string;
+        tags?: string[];
+    }): Promise<boolean> {
+        try {
+            const metadata = await this.getFileMetadata(fileId, userId);
+            
+            // Update fields
+            if (updates.filename !== undefined) metadata.filename = updates.filename;
+            if (updates.description !== undefined) metadata.description = updates.description;
+            if (updates.tags !== undefined) metadata.tags = updates.tags;
+            
+            metadata.updatedAt = new Date().toISOString();
+            
+            // Save updated metadata
+            const metadataPath = this.getMetadataPath(fileId, userId);
+            await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+            
+            return true;
+        } catch (error) {
+            if (error instanceof FileServiceError) {
+                throw error;
+            }
+            console.error('Update metadata failed:', error);
+            throw new FileServiceError(
+                'Failed to update metadata',
+                'UPDATE_METADATA_FAILED',
+                500
+            );
+        }
+    }
+
+    /**
+     * Get storage statistics for a user
+     */
+    async getStorageStats(userId: string): Promise<{
         totalFiles: number;
         totalSize: number;
         oldestFile?: string;
@@ -414,7 +526,7 @@ export class FileService {
         corruptedFiles: number;
     }> {
         try {
-            const files = await this.listFiles();
+            const files = await this.listFiles(userId);
             
             if (files.length === 0) {
                 return {
@@ -432,7 +544,7 @@ export class FileService {
             // Check for corrupted files
             let corruptedFiles = 0;
             for (const file of files) {
-                const integrity = await this.verifyFileIntegrity(file.id);
+                const integrity = await this.verifyFileIntegrity(file.id, userId);
                 if (!integrity.isValid) {
                     corruptedFiles++;
                 }

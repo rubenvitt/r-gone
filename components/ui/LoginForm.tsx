@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Lock, AlertTriangle, Clock, Shield, Eye, EyeOff } from 'lucide-react'
+import { Lock, AlertTriangle, Clock, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PassphraseInput } from '@/components/ui/PassphraseInput'
 import { useAuth } from '@/hooks/useAuth'
@@ -19,8 +19,6 @@ export default function LoginForm({
 }: LoginFormProps) {
   const [passphrase, setPassphrase] = useState('')
   const [isSetupMode, setIsSetupMode] = useState(false)
-  const [recoveryHint, setRecoveryHint] = useState('')
-  const [showRecoveryHint, setShowRecoveryHint] = useState(false)
   const [countdown, setCountdown] = useState(0)
 
   const {
@@ -65,7 +63,7 @@ export default function LoginForm({
     let success = false
     
     if (isSetupMode) {
-      success = await setupPassphrase(passphrase, recoveryHint || undefined)
+      success = await setupPassphrase(passphrase)
       if (success) {
         setIsSetupMode(false)
         setPassphrase('')
@@ -75,6 +73,10 @@ export default function LoginForm({
       success = await login(passphrase)
       if (success) {
         onLoginSuccess?.()
+        // Small delay to ensure session passphrase is saved
+        setTimeout(() => {
+          window?.location?.reload()
+        }, 100)
       }
     }
   }
@@ -101,34 +103,16 @@ export default function LoginForm({
             )}
           </div>
           <h2 className="text-2xl font-bold text-gray-900">
-            {isSetupMode ? 'Setup Security' : 'Secure Access'}
+            {isSetupMode ? 'Create Your Account' : 'Access Your Account'}
           </h2>
           <p className="text-gray-600 mt-2">
             {isSetupMode 
-              ? 'Create a strong passphrase to protect your emergency information'
-              : 'Enter your passphrase to access your encrypted data'
+              ? 'Your secret key acts as both your account identifier and password. Each unique key creates a separate, isolated account.'
+              : 'Enter your secret key to access your encrypted data. Each key opens a different account.'
             }
           </p>
         </div>
 
-        {/* Recovery Hint Display */}
-        {!isSetupMode && state.recoveryHint && (
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-blue-900">Recovery Hint</span>
-              <button
-                type="button"
-                onClick={() => setShowRecoveryHint(!showRecoveryHint)}
-                className="text-blue-600 hover:text-blue-800"
-              >
-                {showRecoveryHint ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            {showRecoveryHint && (
-              <p className="text-blue-800 mt-2">{state.recoveryHint}</p>
-            )}
-          </div>
-        )}
 
         {/* Rate Limiting Warning */}
         {isLocked && (
@@ -161,12 +145,12 @@ export default function LoginForm({
           {/* Passphrase Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {isSetupMode ? 'Create Passphrase' : 'Passphrase'}
+              {isSetupMode ? 'Create Secret Key' : 'Secret Key'}
             </label>
             <PassphraseInput
               value={passphrase}
               onChange={setPassphrase}
-              placeholder={isSetupMode ? 'Create a strong passphrase' : 'Enter your passphrase'}
+              placeholder={isSetupMode ? 'Create a unique secret key' : 'Enter your secret key'}
               showStrengthIndicator={isSetupMode}
               showGenerateButton={isSetupMode}
               disabled={state.isLoading || isLocked}
@@ -174,26 +158,6 @@ export default function LoginForm({
             />
           </div>
 
-          {/* Recovery Hint Input (Setup Mode) */}
-          {isSetupMode && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Recovery Hint (Optional)
-              </label>
-              <input
-                type="text"
-                value={recoveryHint}
-                onChange={(e) => setRecoveryHint(e.target.value)}
-                placeholder="A hint to help you remember your passphrase"
-                disabled={state.isLoading}
-                className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                maxLength={100}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                This hint will be shown when you login (stored unencrypted)
-              </p>
-            </div>
-          )}
 
           {/* Submit Button */}
           <Button
@@ -211,12 +175,12 @@ export default function LoginForm({
                 {isSetupMode ? (
                   <>
                     <Shield className="h-5 w-5 mr-2" />
-                    Setup Passphrase
+                    Create New Account
                   </>
                 ) : (
                   <>
                     <Lock className="h-5 w-5 mr-2" />
-                    {isLocked ? `Locked (${formatCountdown(countdown)})` : 'Unlock'}
+                    {isLocked ? `Locked (${formatCountdown(countdown)})` : 'Access Account'}
                   </>
                 )}
               </>
@@ -231,13 +195,12 @@ export default function LoginForm({
                 onClick={() => {
                   setIsSetupMode(!isSetupMode)
                   setPassphrase('')
-                  setRecoveryHint('')
                   clearError()
                 }}
                 className="text-blue-600 hover:text-blue-800 text-sm"
                 disabled={state.isLoading}
               >
-                {isSetupMode ? 'Back to Login' : 'Change Passphrase'}
+                {isSetupMode ? 'Back to Login' : 'Create New Account'}
               </button>
             </div>
           )}
@@ -260,6 +223,14 @@ export default function LoginForm({
             </div>
           </div>
         )}
+
+        {/* Important Notice */}
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <p className="text-xs text-gray-600 text-center">
+            <strong>Important:</strong> Each secret key creates a completely separate account. 
+            If you forget your key, you cannot recover your data. Store it safely!
+          </p>
+        </div>
       </div>
     </div>
   )

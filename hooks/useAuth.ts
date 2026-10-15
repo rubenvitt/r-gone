@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { sessionPassphraseService } from '@/services/session-passphrase-service'
 
 export interface AuthState {
   isAuthenticated: boolean
@@ -142,6 +143,9 @@ export function useAuth(): UseAuthReturn {
       const result = await response.json()
 
       if (result.success) {
+        // Store the passphrase in the session service for file encryption
+        sessionPassphraseService.setPassphrase(passphrase)
+        
         setState(prev => ({
           ...prev,
           isAuthenticated: true,
@@ -169,6 +173,10 @@ export function useAuth(): UseAuthReturn {
   const logout = useCallback(async (): Promise<void> => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
+      
+      // Clear the stored passphrase on logout
+      sessionPassphraseService.clearPassphrase()
+      
       setState(prev => ({
         ...prev,
         isAuthenticated: false,
@@ -176,6 +184,10 @@ export function useAuth(): UseAuthReturn {
       }))
     } catch (error) {
       console.error('Logout failed:', error)
+      
+      // Clear passphrase even on error
+      sessionPassphraseService.clearPassphrase()
+      
       // Force logout on client side even if server request failed
       setState(prev => ({
         ...prev,

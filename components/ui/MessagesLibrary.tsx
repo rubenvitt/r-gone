@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
+import { v4 as uuidv4 } from 'uuid'
 import { useTranslation } from 'react-i18next'
 import {
   Plus,
@@ -224,7 +225,7 @@ export default function MessagesLibrary({
     if (message) {
       const newMessage = {
         ...message,
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         title: `${message.title} (Copy)`,
         status: 'draft' as MessageStatus,
         createdAt: new Date().toISOString(),

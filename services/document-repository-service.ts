@@ -1,5 +1,6 @@
 'use client'
 
+import { v4 as uuidv4 } from 'uuid'
 import { 
   DocumentEntry, 
   DocumentRepository, 
@@ -129,7 +130,7 @@ export class DocumentRepositoryService {
 
     // Create document entry
     const document: DocumentEntry = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       filename: this.sanitizeFilename(file.name),
       originalFilename: file.name,
       fileType: analysis.fileType,

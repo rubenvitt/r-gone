@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid'
 import { TimeConstraint } from '@/types/data';
 import crypto from 'crypto';
 
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     const availableAt = new Date(now.getTime() + (delayHours * 60 * 60 * 1000));
 
     const timeDelayedAccess: TimeDelayedAccess = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       beneficiaryId,
       resourceType,
       resourceId,

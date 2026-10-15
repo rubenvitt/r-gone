@@ -13,7 +13,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await authService.setPassphrase(passphrase, 'default', recoveryHint)
+    // Generate userId from passphrase
+    const userId = authService.generateUserIdFromPassphrase(passphrase)
+    const result = await authService.setPassphrase(passphrase, userId, recoveryHint)
 
     if (!result.success) {
       return NextResponse.json(
@@ -35,10 +37,32 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const hasPassphrase = await authService.hasPassphrase('default')
-    const recoveryHint = hasPassphrase ? await authService.getRecoveryHint('default') : null
+    // This endpoint now requires authentication to check setup status
+    // For unauthenticated users, we'll return that no passphrase is set
+    // This is secure because each user has their own account
+    const sessionId = request.cookies.get('session')?.value
+    
+    if (!sessionId) {
+      return NextResponse.json({
+        success: true,
+        hasPassphrase: false,
+        recoveryHint: null
+      })
+    }
+
+    const { valid, userId } = await authService.validateSession(sessionId)
+    if (!valid || !userId) {
+      return NextResponse.json({
+        success: true,
+        hasPassphrase: false,
+        recoveryHint: null
+      })
+    }
+
+    const hasPassphrase = await authService.hasPassphrase(userId)
+    const recoveryHint = hasPassphrase ? await authService.getRecoveryHint(userId) : null
 
     return NextResponse.json({
       success: true,

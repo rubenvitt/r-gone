@@ -1,5 +1,6 @@
 'use client'
 
+import { v4 as uuidv4 } from 'uuid'
 import {
   ConditionalRule,
   MessageCondition,
@@ -598,7 +599,7 @@ export class RuleEvaluationService {
     
     // Create delivery log
     const deliveryLog: MessageDeliveryLog = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       messageId: message.id,
       recipientId: recipientIds[0] || 'system', // TODO: Handle multiple recipients
       deliveryMethod: action.parameters.deliveryMethod || 'system',

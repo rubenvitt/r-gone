@@ -9,6 +9,7 @@ import PasswordVault from '@/components/ui/PasswordVault'
 import DocumentRepository from '@/components/ui/DocumentRepository'
 import { PassphraseInput } from '@/components/ui/PassphraseInput'
 import { useEncryption } from '@/hooks/useEncryption'
+import { useSessionEncryption } from '@/hooks/useSessionEncryption'
 import { useFileService } from '@/hooks/useFileService'
 import { DecryptedData, EnhancedDecryptedData } from '@/types/data'
 import { migrateToMultiNote, createEnhancedData } from '@/utils/multi-note-utils'
@@ -44,6 +45,7 @@ export default function EncryptedEditor({
 }: EncryptedEditorProps) {
   const [mode, setMode] = useState<EditorMode>('setup')
   const [passphrase, setPassphrase] = useState('')
+  const [useSessionPassphrase, setUseSessionPassphrase] = useState(true)
   const [content, setContent] = useState('')
   const [decryptedData, setDecryptedData] = useState<EnhancedDecryptedData | null>(null)
   const [encryptedData, setEncryptedData] = useState('')
@@ -52,6 +54,15 @@ export default function EncryptedEditor({
   const [viewMode, setViewMode] = useState<'editor' | 'preview'>('editor')
   const [activeTab, setActiveTab] = useState<'notes' | 'passwords' | 'documents'>('notes')
 
+  // Use session encryption hook
+  const sessionEncryption = useSessionEncryption()
+  
+  // Regular encryption for fallback
+  const regularEncryption = useEncryption()
+  
+  // Determine which encryption to use
+  const shouldUseSession = useSessionPassphrase && sessionEncryption.hasSessionPassphrase
+  
   const {
     state: encryptionState,
     encryptContent,
@@ -60,7 +71,17 @@ export default function EncryptedEditor({
     isContentEncrypted,
     extractRichTextContent,
     clearError
-  } = useEncryption()
+  } = shouldUseSession ? {
+    state: sessionEncryption.state,
+    encryptContent: async (content: string, pass: string, title?: string) => 
+      sessionEncryption.encryptWithSession(content, title),
+    decryptContent: async (data: string, pass: string) => 
+      sessionEncryption.decryptWithSession(data),
+    validatePassphrase: sessionEncryption.validatePassphrase,
+    isContentEncrypted: sessionEncryption.isContentEncrypted,
+    extractRichTextContent: sessionEncryption.extractRichTextContent,
+    clearError: sessionEncryption.clearError
+  } : regularEncryption
 
   const {
     saveFile,
@@ -118,6 +139,42 @@ export default function EncryptedEditor({
     loadFileContent()
   }, [fileId, loadFile, isContentEncrypted, initialContent, clearError])
 
+  // Auto-decrypt when session passphrase is available
+  useEffect(() => {
+    const autoDecrypt = async () => {
+      if (mode === 'locked' && encryptedData && shouldUseSession) {
+        setSaveStatus('saving')
+        setStatusMessage('Auto-decrypting with session...')
+        
+        try {
+          const result = await decryptContent(encryptedData, '')
+          
+          if (result.success && result.decryptedData) {
+            const enhancedData = createEnhancedData(result.decryptedData)
+            setDecryptedData(enhancedData)
+            
+            if (useMultiNoteEditor) {
+              setMode('unlocked')
+            } else {
+              const textContent = extractRichTextContent(result.decryptedData)
+              setContent(textContent)
+              setMode('unlocked')
+            }
+            
+            setSaveStatus('idle')
+            setStatusMessage('Decrypted successfully')
+          }
+        } catch (error) {
+          // Session decryption failed, fall back to manual
+          setSaveStatus('idle')
+          setStatusMessage('Enter passphrase to decrypt')
+        }
+      }
+    }
+    
+    autoDecrypt()
+  }, [mode, encryptedData, shouldUseSession, decryptContent, extractRichTextContent, useMultiNoteEditor])
+  
   // Initialize component based on initial content
   useEffect(() => {
     if (initialContent && !fileId) {
@@ -573,7 +630,6 @@ export default function EncryptedEditor({
                 data={decryptedData}
                 onDataChange={handleMultiNoteDataChange}
                 onSave={handleMultiNoteSave}
-                autoSaveInterval={autoSaveInterval}
                 isLoading={encryptionState.isEncrypting || encryptionState.isDecrypting}
               />
             ) : (

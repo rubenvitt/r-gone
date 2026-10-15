@@ -2,6 +2,7 @@
 
 // Client-side messages library service
 import { MessagesLibrary, PersonalMessage } from '@/types/data'
+import { v4 as uuidv4 } from 'uuid'
 import { messagesLibraryService } from './messages-library-service'
 
 class MessagesLibraryClient {
@@ -55,7 +56,7 @@ class MessagesLibraryClient {
     // In a real implementation, this would call an API
     const library = this.getLibrary()
     const newMessage: PersonalMessage = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       title: message.title || '',
       type: message.type || 'general',
       format: message.format || 'text',

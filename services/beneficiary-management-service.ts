@@ -15,6 +15,7 @@ import {
   DocumentCategory
 } from '@/types/data'
 import crypto from 'crypto'
+import { v4 as uuidv4 } from 'uuid'
 import { auditLoggingService } from './audit-logging-service'
 
 export interface BeneficiaryCreateOptions {
@@ -121,7 +122,7 @@ export class BeneficiaryManagementService {
     }
 
     const beneficiary: Beneficiary = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       email: options.email,
       name: options.name,
       relationship: options.relationship,
@@ -289,7 +290,7 @@ export class BeneficiaryManagementService {
     }
 
     const invitation: BeneficiaryInvitation = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       beneficiaryId,
       email: beneficiary.email,
       token: this.generateInvitationToken(),

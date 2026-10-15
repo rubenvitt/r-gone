@@ -1,6 +1,7 @@
 'use client'
 
 import { PasswordEntry, PasswordVault, PasswordCategory, PasswordStrength, PasswordHistoryEntry, CustomField } from '@/types/data'
+import { v4 as uuidv4 } from 'uuid'
 import { encryptionService } from '@/services/encryption-service'
 
 export interface PasswordGeneratorOptions {
@@ -74,7 +75,7 @@ export class PasswordVaultService {
   addEntry(vault: PasswordVault, entry: Omit<PasswordEntry, 'id' | 'createdAt' | 'updatedAt' | 'strength'>): PasswordVault {
     const newEntry: PasswordEntry = {
       ...entry,
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       strength: this.analyzePasswordStrength(entry.password),
@@ -105,7 +106,7 @@ export class PasswordVaultService {
     let updatedHistory = currentEntry.history || []
     if (isPasswordChanged && currentEntry.password) {
       const historyEntry: PasswordHistoryEntry = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         password: currentEntry.password,
         changedAt: new Date().toISOString(),
         reason: 'Manual update'

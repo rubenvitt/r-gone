@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { v4 as uuidv4 } from 'uuid'
 import { 
   X, 
   Save, 
@@ -260,7 +261,7 @@ export default function DigitalAssetForm({
   // Add custom field
   const handleAddCustomField = useCallback(() => {
     setCustomFields([...customFields, {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       label: '',
       value: '',
       type: 'text',

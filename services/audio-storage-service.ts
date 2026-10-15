@@ -1,5 +1,6 @@
 'use client'
 
+import { v4 as uuidv4 } from 'uuid'
 export interface AudioMetadata {
   id: string
   filename: string
@@ -33,7 +34,7 @@ export class AudioStorageService {
   async saveAudio(blob: Blob, metadata?: Partial<AudioMetadata>): Promise<string> {
     try {
       // Generate ID
-      const id = metadata?.id || crypto.randomUUID()
+      const id = metadata?.id || uuidv4()
       
       // Convert blob to data URL for storage
       const dataUrl = await this.blobToDataUrl(blob)

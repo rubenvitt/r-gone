@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import { v4 as uuidv4 } from 'uuid'
 import path from 'path';
 import crypto from 'crypto';
 import { fileService, FileMetadata } from './file-service';
@@ -188,7 +189,7 @@ export class BackupService {
     options: { specificFileId?: string } = {}
   ): Promise<BackupEntry> {
     const config = await this.loadConfig();
-    const backupId = crypto.randomUUID();
+    const backupId = uuidv4();
     const timestamp = new Date().toISOString();
     
     try {
@@ -643,7 +644,7 @@ export class BackupService {
     error?: string;
   }> {
     try {
-      const exportId = crypto.randomUUID();
+      const exportId = uuidv4();
       const timestamp = new Date().toISOString();
       const exportDir = path.join(this.backupDir, 'exports', exportId);
       
@@ -970,7 +971,7 @@ IMPORTANT: Keep this export secure and backed up in multiple locations.
           const sourceFilePath = path.join(backupPath, fileInfo.relativePath);
           
           // Generate new ID if requested
-          const targetFileId = options.restoreToNewIds ? crypto.randomUUID() : fileInfo.fileId;
+          const targetFileId = options.restoreToNewIds ? uuidv4() : fileInfo.fileId;
           
           // Check for conflicts
           if (!options.restoreToNewIds) {

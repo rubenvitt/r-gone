@@ -22,6 +22,55 @@ pnpm start
 pnpm lint
 ```
 
+## IDE Integration (JetBrains MCP)
+
+This project includes JetBrains MCP server integration, enabling direct communication with your IDE for enhanced development workflows.
+
+### Key Capabilities
+
+**File Operations:**
+- `mcp__jetbrains__get_open_in_editor_file_text` - Read currently open file
+- `mcp__jetbrains__replace_current_file_text` - Replace entire file content
+- `mcp__jetbrains__replace_specific_text` - Make targeted text replacements
+- `mcp__jetbrains__create_new_file_with_text` - Create new files in project
+
+**Code Navigation:**
+- `mcp__jetbrains__find_files_by_name_substring` - Search files by name
+- `mcp__jetbrains__search_in_files_content` - Search content across project
+- `mcp__jetbrains__list_files_in_folder` - Explore directory structure
+- `mcp__jetbrains__get_file_text_by_path` - Read specific files
+
+**Development Tools:**
+- `mcp__jetbrains__get_current_file_errors` - Check for errors in current file
+- `mcp__jetbrains__get_project_problems` - View all project issues
+- `mcp__jetbrains__reformat_file` - Apply code formatting
+- `mcp__jetbrains__toggle_debugger_breakpoint` - Manage breakpoints
+
+**Terminal & VCS:**
+- `mcp__jetbrains__execute_terminal_command` - Run terminal commands
+- `mcp__jetbrains__get_terminal_text` - Read terminal output
+- `mcp__jetbrains__get_project_vcs_status` - Check Git status
+
+### Usage Examples
+
+```typescript
+// Example: Refactoring with IDE integration
+// 1. Find all files containing a pattern
+mcp__jetbrains__search_in_files_content({ searchText: "oldFunctionName" })
+
+// 2. Make targeted replacements
+mcp__jetbrains__replace_specific_text({
+  pathInProject: "services/file-service.ts",
+  oldText: "oldFunctionName",
+  newText: "newFunctionName"
+})
+
+// 3. Check for errors after changes
+mcp__jetbrains__get_project_problems()
+```
+
+This integration provides seamless development experience by working directly within your IDE environment.
+
 ## Encryption Architecture
 
 The application implements two distinct encryption approaches:

@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid'
 import { 
   AccessControlMatrix,
   AccessControlRule,
@@ -46,7 +47,7 @@ export class AccessControlService {
     createdBy: string = 'system'
   ): Promise<AccessControlMatrix> {
     const matrix: AccessControlMatrix = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       name,
       description,
       rules: [],
@@ -85,7 +86,7 @@ export class AccessControlService {
   ): Promise<AccessControlMatrix> {
     const newRule: AccessControlRule = {
       ...rule,
-      id: crypto.randomUUID()
+      id: uuidv4()
     };
 
     const updatedMatrix = {
@@ -193,7 +194,7 @@ export class AccessControlService {
     maxUsage?: number
   ): Promise<TemporaryAccessGrant> {
     const grant: TemporaryAccessGrant = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       beneficiaryId,
       rule,
       grantedBy,

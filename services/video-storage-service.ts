@@ -1,5 +1,6 @@
 'use client'
 
+import { v4 as uuidv4 } from 'uuid'
 export interface VideoMetadata {
   id: string
   filename: string
@@ -37,7 +38,7 @@ export class VideoStorageService {
   async saveVideo(blob: Blob, metadata?: Partial<VideoMetadata>): Promise<string> {
     try {
       // Generate ID
-      const id = metadata?.id || crypto.randomUUID()
+      const id = metadata?.id || uuidv4()
       
       // Convert blob to data URL for storage
       const dataUrl = await this.blobToDataUrl(blob)

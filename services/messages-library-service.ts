@@ -1,5 +1,6 @@
 'use client'
 
+import { v4 as uuidv4 } from 'uuid'
 import { 
   PersonalMessage,
   MessagesLibrary,
@@ -187,7 +188,7 @@ export class MessagesLibraryService {
 
     const now = new Date().toISOString()
     const message: PersonalMessage = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       type: options.type,
       format: options.format,
       category: options.category || library.settings.defaultCategory,
@@ -195,7 +196,7 @@ export class MessagesLibraryService {
       content: options.content,
       recipients: options.recipients.map(r => ({
         ...r,
-        id: r.id || crypto.randomUUID()
+        id: r.id || uuidv4()
       })),
       metadata: {
         importance: 'medium',
@@ -490,7 +491,7 @@ export class MessagesLibraryService {
     metadata?: Record<string, any>
   ): MessagesLibrary {
     const log: MessageDeliveryLog = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       messageId,
       recipientId,
       deliveryMethod,
@@ -851,7 +852,7 @@ Attorney: {{attorneyInfo}}</p>
   createConditionalRule(library: MessagesLibrary, rule: ConditionalRule): MessagesLibrary {
     const newRule: ConditionalRule = {
       ...rule,
-      id: rule.id || crypto.randomUUID(),
+      id: rule.id || uuidv4(),
       enabled: rule.enabled ?? true,
       priority: rule.priority || 1,
       metadata: {
@@ -965,7 +966,7 @@ Attorney: {{attorneyInfo}}</p>
         ...library,
         conditionalRules: rules.map(rule => ({
           ...rule,
-          id: crypto.randomUUID(), // Generate new IDs to avoid conflicts
+          id: uuidv4(), // Generate new IDs to avoid conflicts
           metadata: {
             ...rule.metadata,
             importedAt: new Date().toISOString()

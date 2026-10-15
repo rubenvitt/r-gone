@@ -9,6 +9,7 @@ import {
   ConditionalRule
 } from '@/types/data'
 import { messagesLibraryService } from './messages-library-service'
+import { v4 as uuidv4 } from 'uuid'
 import { ruleEvaluationService } from './rule-evaluation-service'
 
 export interface DeliveryTask {
@@ -147,7 +148,7 @@ export class ScheduledDeliveryService {
     // Create delivery tasks for each recipient
     for (const recipient of message.recipients) {
       const task: DeliveryTask = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         messageId: message.id,
         recipientId: recipient.identifier,
         scheduledAt: new Date(),
@@ -303,7 +304,7 @@ export class ScheduledDeliveryService {
     status: DeliveryStatus
   ): Promise<void> {
     const log: MessageDeliveryLog = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       messageId: task.messageId,
       recipientId: task.recipientId,
       deliveryMethod: task.metadata?.deliveryMethod as DeliveryMethod || 'email',

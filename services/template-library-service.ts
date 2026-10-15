@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from 'uuid'
+
 import { 
   Template, 
   TemplateCategory, 
@@ -199,15 +201,15 @@ class TemplateLibraryService {
     // For now, we'll simulate the execution
     switch (action.type) {
       case 'create_contact':
-        return { type: 'contact', id: crypto.randomUUID(), ...processedData }
+        return { type: 'contact', id: uuidv4(), ...processedData }
       case 'create_asset':
-        return { type: 'asset', id: crypto.randomUUID(), ...processedData }
+        return { type: 'asset', id: uuidv4(), ...processedData }
       case 'create_file':
-        return { type: 'file', id: crypto.randomUUID(), ...processedData }
+        return { type: 'file', id: uuidv4(), ...processedData }
       case 'create_message':
-        return { type: 'message', id: crypto.randomUUID(), ...processedData }
+        return { type: 'message', id: uuidv4(), ...processedData }
       case 'create_password':
-        return { type: 'password', id: crypto.randomUUID(), ...processedData }
+        return { type: 'password', id: uuidv4(), ...processedData }
       case 'configure_setting':
         return { type: 'setting', ...processedData }
       default:

@@ -1,4 +1,5 @@
 import { PasswordEntry, PasswordVault, PasswordCategory } from '@/types/data'
+import { v4 as uuidv4 } from 'uuid'
 import { passwordVaultService } from './password-vault-service'
 
 export type ImportSource = 'lastpass' | 'bitwarden' | 'onepassword' | 'chrome' | 'firefox' | 'generic-csv'
@@ -123,7 +124,7 @@ class PasswordImportService {
       try {
         if (item.type === 1) { // Login type
           const entry: PasswordEntry = {
-            id: crypto.randomUUID(),
+            id: uuidv4(),
             serviceName: item.name || 'Untitled',
             username: item.login?.username || '',
             email: item.login?.username?.includes('@') ? item.login.username : undefined,
@@ -309,7 +310,7 @@ class PasswordImportService {
     }
 
     return {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       serviceName: name || this.extractNameFromURL(url) || 'Untitled',
       username: username,
       email: username.includes('@') ? username : undefined,

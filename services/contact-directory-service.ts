@@ -1,5 +1,6 @@
 'use client'
 
+import { v4 as uuidv4 } from 'uuid'
 import { 
   ContactEntry, 
   ContactDirectory, 
@@ -219,7 +220,7 @@ export class ContactDirectoryService {
     }
 
     const contact: ContactEntry = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       firstName: options.firstName.trim(),
       lastName: options.lastName.trim(),
       displayName: `${options.firstName.trim()} ${options.lastName.trim()}`,
@@ -227,15 +228,15 @@ export class ContactDirectoryService {
       category: options.category || directory.settings.defaultCategory,
       contactMethods: options.contactMethods?.map(method => ({
         ...method,
-        id: crypto.randomUUID()
+        id: uuidv4()
       })) || [],
       addresses: options.addresses?.map(address => ({
         ...address,
-        id: crypto.randomUUID()
+        id: uuidv4()
       })) || [],
       importantDates: options.importantDates?.map(date => ({
         ...date,
-        id: crypto.randomUUID()
+        id: uuidv4()
       })) || [],
       notes: options.notes?.trim(),
       tags: options.tags || [],
@@ -711,7 +712,7 @@ export class ContactDirectoryService {
    */
   createGroup(directory: ContactDirectory, name: string, description?: string): ContactDirectory {
     const group: ContactGroup = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       name: name.trim(),
       description: description?.trim(),
       contactIds: [],

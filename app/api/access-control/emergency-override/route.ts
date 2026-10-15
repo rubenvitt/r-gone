@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid'
 import { accessControlService } from '@/services/access-control-service';
 import { auditLoggingService } from '@/services/audit-logging-service';
 import crypto from 'crypto';
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
       : undefined;
 
     const override: EmergencyOverride = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       triggeredBy,
       reason,
       overrideType,

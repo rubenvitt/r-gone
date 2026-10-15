@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid'
 import jwt from 'jsonwebtoken';
 import fs from 'fs/promises';
 import path from 'path';
@@ -135,7 +136,7 @@ export class EmergencyAccessService {
       throw new Error('Contact not found');
     }
 
-    const tokenId = crypto.randomUUID();
+    const tokenId = uuidv4();
     const now = new Date();
     const tokenType = options.tokenType || 'temporary';
     
@@ -521,7 +522,7 @@ export class EmergencyAccessService {
     await this.ensureDirectories();
     
     if (!contact.id) {
-      contact.id = crypto.randomUUID();
+      contact.id = uuidv4();
       contact.createdAt = new Date().toISOString();
     }
     contact.updatedAt = new Date().toISOString();
@@ -585,7 +586,7 @@ export class EmergencyAccessService {
     await this.ensureDirectories();
     
     if (!group.id) {
-      group.id = crypto.randomUUID();
+      group.id = uuidv4();
       group.createdAt = new Date().toISOString();
     }
     group.updatedAt = new Date().toISOString();
@@ -771,7 +772,7 @@ export class EmergencyAccessService {
    */
   private async logAccess(log: Omit<AccessLog, 'id' | 'timestamp'>): Promise<void> {
     const logEntry: AccessLog = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       timestamp: new Date().toISOString(),
       ...log
     };

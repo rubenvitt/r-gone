@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Header from "@/components/ui/Header";
 import Footer from "@/components/ui/Footer";
-import EncryptedEditor from "@/components/ui/EncryptedEditor";
+import SessionEncryptedEditor from "@/components/ui/SessionEncryptedEditor";
 import FileManager from "@/components/ui/FileManager";
 import BackupManager from "@/components/ui/BackupManager";
 import EmergencyAccessManager from "@/components/ui/EmergencyAccessManager";
@@ -16,8 +16,8 @@ import Dashboard from "@/components/ui/Dashboard";
 import AuthGuard from "@/components/ui/AuthGuard";
 import { Button } from "@/components/ui/button";
 import { ComplianceReportingDashboard } from "@/components/ui/ComplianceReportingDashboard";
-import TriggerEvaluationManager from "@/components/ui/TriggerEvaluationManager";
-import LegalDocumentManager from "@/components/ui/LegalDocumentManager";
+import { TriggerEvaluationManager } from "@/components/ui/TriggerEvaluationManager";
+import { LegalDocumentManager } from "@/components/ui/LegalDocumentManager";
 import { PlusCircle, FolderOpen, Shield, AlertTriangle, Clock, LogOut, KeyRound, Users, Package, BarChart3, MessageSquare, FileCheck, Zap, Gavel } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { ContactDirectory as ContactDirectoryType, DigitalAssetInventory as DigitalAssetInventoryType } from '@/types/data';
@@ -231,10 +231,9 @@ export default function Home() {
                     Create and securely encrypt important information for your trusted contacts.
                     Your data is encrypted client-side and stored securely with versioning.
                   </p>
-                  <EncryptedEditor 
+                  <SessionEncryptedEditor 
                     enableFileManager={true}
-                    enablePasswordVault={true}
-                    enableDocumentRepository={true}
+                    enableManualSave={true}
                     fileId={selectedFileId || undefined}
                     autoSaveInterval={30000}
                   />

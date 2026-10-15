@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid'
 import { accessControlService } from '@/services/access-control-service';
 import { AccessRequest, ResourceType } from '@/types/data';
 import crypto from 'crypto';
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Create access request
     const accessRequest: AccessRequest = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       requesterId,
       resourceType,
       resourceId,

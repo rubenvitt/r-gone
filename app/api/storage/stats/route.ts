@@ -1,9 +1,16 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { fileService, FileServiceError } from '@/services/file-service'
+import { requireAuth } from '@/lib/auth-middleware'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const stats = await fileService.getStorageStats()
+    const authResult = await requireAuth(request);
+    if (!authResult.success) {
+      return authResult.error;
+    }
+    const { userId } = authResult.auth;
+
+    const stats = await fileService.getStorageStats(userId)
 
     return NextResponse.json({
       success: true,
